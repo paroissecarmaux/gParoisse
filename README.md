@@ -6,12 +6,33 @@ Application de secrétariat paroissial pour le suivi des demandes (certificats, 
 
 | Domaine | Choix |
 |---|---|
-| Structure | Une seule page HTML autonome (`index.html`) |
-| Style | CSS pur, inclus dans la page |
-| Logique | JavaScript vanille, inclus dans la page |
+| Structure | HTML/CSS/JS statiques, aucun build |
+| Style | `css/style.css` |
+| Logique | JavaScript vanille, un fichier par module dans `js/` |
 | Stockage | [Dexie.js](https://dexie.org) sur IndexedDB — tout est stocké localement dans le navigateur |
 
-Aucune installation, aucun serveur, aucune dépendance à builder : le fichier `index.html` s'ouvre directement dans un navigateur.
+Aucune installation, aucun serveur, aucune dépendance à builder : `index.html` s'ouvre directement dans un navigateur.
+
+## Structure du code
+
+```
+index.html          Coquille : sidebar, pages plein écran, modale Paramètres
+css/style.css        Tous les styles
+js/db.js             Schéma Dexie (IndexedDB)
+js/utils.js          Utilitaires génériques (dates, texte, DOM, toast…)
+js/csv.js            Parsing CSV générique (délimiteur, dates FR, dates Excel)
+js/state.js           État partagé, navigation plein écran, thème, modale
+js/dashboard.js        Module « Demandes / Tableau de bord »
+js/people.js            Module « Personnes » (+ import CSV)
+js/settings.js           Paramètres, export/import/effacement des données
+js/main.js                Initialisation, raccourcis clavier, câblage global
+```
+
+Chaque module métier (demandes, personnes, et les suivants à venir) est autonome :
+une page liste, une page détail et une page formulaire en plein écran (pas de
+popup), reliées à la barre latérale. Pour ajouter un nouveau module, il suffit
+de dupliquer ce schéma dans un nouveau fichier `js/<module>.js` et de déclarer
+ses pages dans `index.html` et `PAGE_SECTION` (`js/state.js`).
 
 ## Démarrer
 

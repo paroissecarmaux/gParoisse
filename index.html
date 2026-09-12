@@ -6,865 +6,54 @@
 <meta name="theme-color" content="#f8fafc">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Paroisse· Secrétariat de Carmaux Valence</title>
+<title>Secrétariat paroissial de Carmaux-Valence</title>
+
+<link rel="stylesheet" href="css/style.css">
 
 <!-- Dexie.js -->
 <script src="https://unpkg.com/dexie@4/dist/dexie.min.js"></script>
-
-<style>
-:root {
-    --bg: #f5f7fa;
-    --surface: #ffffff;
-    --surface-2: #f8fafc;
-    --border: #e2e8f0;
-    --text: #172033;
-    --muted: #64748b;
-    --primary: #334155;
-    --green: #15803d;
-    --green-bg: #ecfdf3;
-    --orange: #c2410c;
-    --orange-bg: #fff7ed;
-    --red: #b91c1c;
-    --red-bg: #fef2f2;
-    --blue: #1d4ed8;
-    --blue-bg: #eff6ff;
-    --shadow: 0 1px 3px rgba(15,23,42,.06), 0 8px 24px rgba(15,23,42,.04);
-    --radius: 14px;
-}
-
-[data-theme="dark"] {
-    --bg: #0f172a;
-    --surface: #1e293b;
-    --surface-2: #334155;
-    --border: #475569;
-    --text: #f1f5f9;
-    --muted: #94a3b8;
-    --primary: #94a3b8;
-    --green: #4ade80;
-    --green-bg: #14532d;
-    --orange: #fb923c;
-    --orange-bg: #7c2d12;
-    --red: #f87171;
-    --red-bg: #7f1d1d;
-    --blue: #60a5fa;
-    --blue-bg: #1e3a8a;
-    --shadow: 0 1px 3px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.2);
-}
-
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-
-body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.45;
-    transition: background .2s, color .2s;
-}
-
-button, input, select, textarea { font: inherit; color: inherit; }
-button { cursor: pointer; }
-button:disabled { opacity: .55; cursor: not-allowed; }
-
-:focus-visible {
-    outline: 2px solid #64748b;
-    outline-offset: 2px;
-}
-
-.app { min-height: 100vh; }
-
-/* Header */
-.header {
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    background: color-mix(in srgb, var(--surface) 94%, transparent);
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--border);
-}
-
-.header-inner {
-    max-width: 1500px;
-    margin: auto;
-    padding: max(14px, env(safe-area-inset-top)) 22px 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-}
-
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-}
-
-.brand-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    background: var(--primary);
-    color: white;
-    display: grid;
-    place-items: center;
-    font-size: 20px;
-    flex-shrink: 0;
-}
-
-[data-theme="dark"] .brand-icon {
-    background: #64748b;
-    color: #0f172a;
-}
-
-.brand-title {
-    margin: 0;
-    font-size: 17px;
-    font-weight: 700;
-    letter-spacing: -.02em;
-}
-
-.brand-subtitle {
-    margin: 1px 0 0;
-    color: var(--muted);
-    font-size: 12px;
-}
-
-.header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-/* Buttons */
-.btn {
-    min-height: 40px;
-    padding: 0 14px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--surface);
-    color: var(--text);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-weight: 600;
-    transition: .15s ease;
-}
-
-.btn:hover {
-    border-color: #94a3b8;
-    background: var(--surface-2);
-}
-
-.btn-primary {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: white;
-}
-
-[data-theme="dark"] .btn-primary {
-    background: #64748b;
-    border-color: #64748b;
-    color: #0f172a;
-}
-
-.btn-primary:hover {
-    filter: brightness(0.9);
-}
-
-.btn-danger {
-    background: var(--red);
-    border-color: var(--red);
-    color: white;
-}
-
-.btn-danger:hover { filter: brightness(0.9); }
-
-.icon-btn {
-    width: 38px;
-    height: 38px;
-    padding: 0;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    border-radius: 10px;
-    display: grid;
-    place-items: center;
-    color: var(--text);
-}
-
-.icon-btn:hover { background: var(--surface-2); }
-
-/* Layout */
-.container {
-    width: min(1500px, calc(100% - 40px));
-    margin: 0 auto;
-}
-
-.main { padding: 28px 0 70px; }
-
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 20px;
-    margin-bottom: 22px;
-    flex-wrap: wrap;
-}
-
-.page-title {
-    margin: 0;
-    font-size: 27px;
-    letter-spacing: -.035em;
-}
-
-.page-description {
-    margin: 5px 0 0;
-    color: var(--muted);
-    font-size: 14px;
-}
-
-/* KPI */
-.kpis {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    margin-bottom: 24px;
-}
-
-.kpi {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px;
-    box-shadow: var(--shadow);
-}
-
-.kpi-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.kpi-label {
-    color: var(--muted);
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.kpi-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
-    display: grid;
-    place-items: center;
-    font-size: 15px;
-}
-
-.kpi-value {
-    margin-top: 7px;
-    font-size: 29px;
-    line-height: 1;
-    font-weight: 750;
-    letter-spacing: -.04em;
-}
-
-.kpi-note {
-    margin-top: 7px;
-    color: var(--muted);
-    font-size: 12px;
-}
-
-.kpi.pending .kpi-icon { color: var(--orange); background: var(--orange-bg); }
-.kpi.progress .kpi-icon { color: var(--blue); background: var(--blue-bg); }
-.kpi.done .kpi-icon { color: var(--green); background: var(--green-bg); }
-.kpi.alert .kpi-icon { color: var(--red); background: var(--red-bg); }
-
-/* Panels */
-.panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-}
-
-.panel-header {
-    padding: 18px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 15px;
-}
-
-.panel-title {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 700;
-}
-
-.panel-subtitle {
-    margin: 3px 0 0;
-    color: var(--muted);
-    font-size: 12px;
-}
-
-.panel-body { padding: 20px; }
-
-/* Dashboard */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(320px, .6fr);
-    gap: 18px;
-    margin-bottom: 24px;
-}
-
-.alert-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.alert-item {
-    border: 1px solid var(--border);
-    border-radius: 11px;
-    padding: 11px 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-}
-
-.alert-item:hover { background: var(--surface-2); }
-
-.alert-marker {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--red);
-    flex-shrink: 0;
-}
-
-.alert-main { min-width: 0; flex: 1; }
-
-.alert-name {
-    font-size: 13px;
-    font-weight: 700;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.alert-detail {
-    color: var(--muted);
-    font-size: 11px;
-}
-
-.empty {
-    padding: 28px;
-    text-align: center;
-    color: var(--muted);
-    font-size: 13px;
-}
-
-/* Toolbar */
-.toolbar {
-    padding: 14px;
-    border-bottom: 1px solid var(--border);
-    display: grid;
-    grid-template-columns: minmax(220px, 1fr) auto auto auto;
-    gap: 9px;
-}
-
-.search { position: relative; }
-
-.search input {
-    width: 100%;
-    min-height: 40px;
-    padding: 0 13px 0 38px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    outline: none;
-    background: var(--surface);
-    color: var(--text);
-}
-
-.search input:focus,
-.field input:focus,
-.field select:focus,
-.field textarea:focus {
-    border-color: #94a3b8;
-    box-shadow: 0 0 0 3px rgba(148,163,184,.25);
-}
-
-.search-icon {
-    position: absolute;
-    left: 13px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--muted);
-    pointer-events: none;
-}
-
-.select {
-    min-height: 40px;
-    padding: 0 11px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--surface);
-    color: var(--text);
-    outline: none;
-}
-
-.result-count {
-    padding: 10px 14px 0;
-    font-size: 12px;
-    color: var(--muted);
-    font-weight: 600;
-}
-
-/* Tabs */
-.tabs {
-    padding: 0 14px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    gap: 4px;
-}
-
-.tab {
-    position: relative;
-    padding: 12px 14px;
-    border: 0;
-    background: transparent;
-    color: var(--muted);
-    font-weight: 650;
-    font-size: 13px;
-}
-
-.tab.active { color: var(--text); }
-
-.tab.active::after {
-    content: "";
-    position: absolute;
-    left: 12px;
-    right: 12px;
-    bottom: -1px;
-    height: 2px;
-    background: var(--primary);
-    border-radius: 2px;
-}
-
-/* Requests */
-.request-list {
-    padding: 14px;
-    display: grid;
-    gap: 9px;
-}
-
-.request-card {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 15px;
-    display: grid;
-    grid-template-columns: minmax(180px, 1.1fr) minmax(140px, .8fr) minmax(120px, .7fr) minmax(110px, .5fr) auto;
-    align-items: center;
-    gap: 18px;
-    transition: .15s ease;
-    cursor: pointer;
-    background: var(--surface);
-}
-
-.request-card:hover {
-    border-color: #94a3b8;
-    box-shadow: 0 4px 14px rgba(15,23,42,.08);
-}
-
-.request-card.urgent { border-left: 3px solid var(--red); }
-.request-card.overdue { background: color-mix(in srgb, var(--red-bg) 40%, var(--surface)); }
-
-.request-person { min-width: 0; }
-
-.request-name {
-    font-weight: 700;
-    font-size: 14px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.request-contact {
-    color: var(--muted);
-    font-size: 11px;
-    margin-top: 3px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.request-type { font-size: 13px; }
-
-.request-date {
-    color: var(--muted);
-    font-size: 12px;
-    margin-top: 3px;
-}
-
-.badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 8px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.badge.pending { color: var(--orange); background: var(--orange-bg); }
-.badge.progress { color: var(--blue); background: var(--blue-bg); }
-.badge.done { color: var(--green); background: var(--green-bg); }
-.badge.cancelled { color: var(--muted); background: var(--surface-2); }
-.badge.urgent { color: var(--red); background: var(--red-bg); }
-.badge.normal { color: var(--muted); background: var(--surface-2); }
-
-.deadline {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 5px;
-}
-
-.deadline.overdue {
-    color: var(--red);
-    font-weight: 700;
-}
-
-.request-actions {
-    display: flex;
-    gap: 5px;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-}
-
-/* Modal */
-.modal-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    padding: 20px;
-    background: rgba(15,23,42,.55);
-    backdrop-filter: blur(4px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-backdrop.open { display: flex; }
-
-.modal {
-    width: min(720px, 100%);
-    max-height: min(850px, 92vh);
-    overflow: auto;
-    background: var(--surface);
-    border-radius: 18px;
-    box-shadow: 0 25px 80px rgba(15,23,42,.35);
-    color: var(--text);
-}
-
-.modal.large { width: min(850px, 100%); }
-
-.modal-header {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    padding: 18px 20px;
-    background: color-mix(in srgb, var(--surface) 96%, transparent);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 15px;
-}
-
-.modal-title { margin: 0; font-size: 17px; }
-
-.modal-body { padding: 20px; }
-
-.modal-footer {
-    position: sticky;
-    bottom: 0;
-    padding: 14px 20px;
-    background: color-mix(in srgb, var(--surface) 96%, transparent);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-/* Form */
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-}
-
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.field.full { grid-column: 1 / -1; }
-
-.field label {
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.field input,
-.field select,
-.field textarea {
-    width: 100%;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--surface);
-    color: var(--text);
-    padding: 10px 11px;
-    outline: none;
-}
-
-.field textarea {
-    min-height: 100px;
-    resize: vertical;
-}
-
-.field-help {
-    color: var(--muted);
-    font-size: 11px;
-}
-
-.field-error {
-    color: var(--red);
-    font-size: 11px;
-    margin-top: 2px;
-}
-
-/* Detail */
-.detail-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-}
-
-.detail-item {
-    padding: 13px;
-    border: 1px solid var(--border);
-    border-radius: 11px;
-    background: var(--surface-2);
-}
-
-.detail-item.full { grid-column: 1 / -1; }
-
-.detail-label {
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-}
-
-.detail-value {
-    margin-top: 5px;
-    font-size: 14px;
-    white-space: pre-wrap;
-}
-
-.history { margin-top: 20px; }
-
-.history-title {
-    margin-bottom: 10px;
-    font-size: 14px;
-    font-weight: 700;
-}
-
-.history-item {
-    display: flex;
-    gap: 11px;
-    padding: 9px 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.history-dot {
-    width: 8px;
-    height: 8px;
-    margin-top: 5px;
-    border-radius: 50%;
-    background: #94a3b8;
-    flex-shrink: 0;
-}
-
-.history-text { font-size: 12px; }
-
-.history-date {
-    color: var(--muted);
-    font-size: 10px;
-    margin-top: 2px;
-}
-
-/* Settings */
-.settings-section { padding: 20px; }
-
-.settings-section + .settings-section {
-    border-top: 1px solid var(--border);
-}
-
-.settings-title {
-    margin: 0 0 5px;
-    font-size: 15px;
-}
-
-.settings-description {
-    margin: 0 0 16px;
-    color: var(--muted);
-    font-size: 12px;
-}
-
-.settings-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 15px;
-    padding: 10px 0;
-}
-
-.settings-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-/* Toast */
-.toast-container {
-    position: fixed;
-    z-index: 200;
-    right: 18px;
-    bottom: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: min(360px, calc(100% - 36px));
-}
-
-.toast {
-    padding: 12px 14px;
-    background: #172033;
-    color: white;
-    border-radius: 11px;
-    box-shadow: 0 12px 35px rgba(15,23,42,.22);
-    font-size: 13px;
-    animation: toast-in .18s ease;
-}
-
-.toast.success { background: #166534; }
-.toast.error { background: #991b1b; }
-
-@keyframes toast-in {
-    from { transform: translateY(8px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-/* Footer */
-.footer {
-    max-width: 1500px;
-    width: min(100% - 40px, 1500px);
-    margin: 0 auto;
-    padding: 0 0 30px;
-    color: var(--muted);
-    font-size: 11px;
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-/* Mobile */
-@media (max-width: 1000px) {
-    .kpis { grid-template-columns: repeat(2, 1fr); }
-    .dashboard-grid { grid-template-columns: 1fr; }
-    .request-card { grid-template-columns: 1fr 1fr; }
-    .request-actions { justify-content: flex-start; }
-    .toolbar { grid-template-columns: 1fr 1fr; }
-    .toolbar .search { grid-column: 1 / -1; }
-}
-
-@media (max-width: 650px) {
-    .container, .footer { width: min(100% - 24px, 1500px); }
-    .header-inner { padding-left: 12px; padding-right: 12px; }
-    .header-actions .secondary { display: none; }
-    .main { padding-top: 20px; }
-    .page-header { align-items: stretch; flex-direction: column; }
-    .page-title { font-size: 23px; }
-    .kpis { gap: 9px; }
-    .kpi { padding: 14px; }
-    .kpi-value { font-size: 25px; }
-    .toolbar { grid-template-columns: 1fr; }
-    .toolbar .search { grid-column: auto; }
-    .tabs { overflow-x: auto; }
-    .tab { white-space: nowrap; }
-    .request-card { grid-template-columns: 1fr; gap: 10px; }
-    .request-actions {
-        padding-top: 3px;
-        border-top: 1px solid var(--border);
-    }
-    .form-grid, .detail-grid { grid-template-columns: 1fr; }
-    .field.full, .detail-item.full { grid-column: auto; }
-    .modal-backdrop { padding: 0; align-items: flex-end; }
-    .modal {
-        width: 100%;
-        max-height: 94vh;
-        border-radius: 18px 18px 0 0;
-    }
-    .footer { flex-direction: column; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    * {
-        scroll-behavior: auto !important;
-        animation: none !important;
-        transition: none !important;
-    }
-}
-</style>
 </head>
 
 <body>
 <div class="app">
 
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon" aria-hidden="true">✝</div>
+        <div class="brand-text">
+            <div class="brand-title" id="brandTitle">Secrétariat paroissial de Carmaux-Valence</div>
+        </div>
+    </div>
+    <nav class="sidebar-nav" aria-label="Navigation principale">
+        <button class="nav-item active" data-page="dashboard" type="button" aria-selected="true">
+            <span aria-hidden="true">⌂</span> Tableau de bord
+        </button>
+        <button class="nav-item" data-page="people" type="button" aria-selected="false">
+            <span aria-hidden="true">◈</span> Les personnes
+        </button>
+    </nav>
+</aside>
+
+<div class="app-content">
+
 <header class="header">
     <div class="header-inner">
-        <div class="brand">
-            <div class="brand-icon" aria-hidden="true">✝</div>
-            <div class="brand-text">
-                <h1 class="brand-title" id="brandTitle">Secrétariat paroissial</h1>
-                <p class="brand-subtitle">Gestion locale des demandes</p>
-            </div>
-        </div>
+        <button class="icon-btn sidebar-toggle" id="sidebarToggle" aria-label="Ouvrir le menu" aria-controls="sidebar" aria-expanded="false">☰</button>
         <div class="header-actions">
-            <button class="btn secondary" id="themeBtn" title="Changer de thème" aria-label="Thème clair/sombre">
-                ☾
-            </button>
-            <button class="btn secondary" id="exportJsonBtn" title="Sauvegarder les données">
-                ↓ Sauvegarde
-            </button>
-            <button class="btn btn-primary" id="newRequestBtn">
-                ＋ Nouvelle demande
-            </button>
+            <button class="btn secondary" id="themeBtn" title="Changer de thème" aria-label="Thème clair/sombre">☾</button>
+            <button class="btn secondary" id="exportJsonBtn" title="Sauvegarder les données">↓ Sauvegarde</button>
         </div>
     </div>
 </header>
 
 <main class="main">
 <div class="container">
+
+<!-- ============================================================
+     TABLEAU DE BORD
+============================================================ -->
+<div class="view-page" data-page="dashboard">
 
     <div class="page-header">
         <div>
@@ -873,7 +62,10 @@ button:disabled { opacity: .55; cursor: not-allowed; }
                 Suivez les demandes, les échéances et les tâches à traiter.
             </p>
         </div>
-        <button class="btn" id="settingsBtn">⚙ Paramètres</button>
+        <div class="settings-actions">
+            <button class="btn btn-primary" id="newRequestBtn">＋ Nouvelle demande</button>
+            <button class="btn" id="settingsBtn">⚙ Paramètres</button>
+        </div>
     </div>
 
     <!-- KPI -->
@@ -989,24 +181,45 @@ button:disabled { opacity: .55; cursor: not-allowed; }
     </section>
 
 </div>
-</main>
 
-<footer class="footer">
-    <span>Secrétariat paroissial · Données stockées localement (Dexie + IndexedDB)</span>
-    <span>Raccourcis : <strong>N</strong> nouvelle · <strong>/</strong> recherche · <strong>Échap</strong> fermer</span>
-</footer>
-
+<!-- ============================================================
+     DEMANDE — DÉTAIL
+============================================================ -->
+<div class="view-page" data-page="request-detail" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="requestDetailBackBtn" aria-label="Retour" title="Retour">←</button>
+            <div>
+                <h2 class="page-title" id="requestDetailTitle">Demande</h2>
+                <p class="page-description" id="requestDetailSubtitle"></p>
+            </div>
+        </div>
+        <div class="settings-actions">
+            <button class="btn" id="requestDetailEditBtn">✎ Modifier</button>
+            <button class="btn" id="requestDetailArchiveBtn">▣ Archiver</button>
+            <button class="btn btn-danger" id="requestDetailDeleteBtn">Supprimer</button>
+        </div>
+    </div>
+    <section class="panel">
+        <div class="panel-body" id="requestDetailBody"></div>
+    </section>
 </div>
 
-<!-- MODALE DEMANDE -->
-<div class="modal-backdrop" id="requestModal" role="dialog" aria-modal="true" aria-labelledby="requestModalTitle" hidden>
-    <div class="modal">
-        <div class="modal-header">
-            <h2 class="modal-title" id="requestModalTitle">Nouvelle demande</h2>
-            <button class="icon-btn" data-close-modal="requestModal" aria-label="Fermer">×</button>
+<!-- ============================================================
+     DEMANDE — FORMULAIRE
+============================================================ -->
+<div class="view-page" data-page="request-form" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="requestFormBackBtn" aria-label="Retour" title="Retour">←</button>
+            <div>
+                <h2 class="page-title" id="requestFormTitle">Nouvelle demande</h2>
+            </div>
         </div>
+    </div>
+    <section class="panel">
         <form id="requestForm">
-            <div class="modal-body">
+            <div class="panel-body">
                 <input type="hidden" id="requestId">
                 <div class="form-grid">
                     <div class="field">
@@ -1067,31 +280,211 @@ button:disabled { opacity: .55; cursor: not-allowed; }
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn" data-close-modal="requestModal">Annuler</button>
+            <div class="panel-footer">
+                <button type="button" class="btn" id="requestFormCancelBtn">Annuler</button>
                 <button type="submit" class="btn btn-primary">Enregistrer</button>
             </div>
         </form>
-    </div>
+    </section>
 </div>
 
-<!-- MODALE DÉTAIL -->
-<div class="modal-backdrop" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="detailTitle" hidden>
-    <div class="modal large">
-        <div class="modal-header">
-            <div>
-                <h2 class="modal-title" id="detailTitle">Demande</h2>
-                <div class="panel-subtitle" id="detailSubtitle"></div>
-            </div>
-            <button class="icon-btn" data-close-modal="detailModal" aria-label="Fermer">×</button>
+<!-- ============================================================
+     PERSONNES — LISTE
+============================================================ -->
+<div class="view-page" data-page="people" hidden>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Les personnes</h2>
+            <p class="page-description">
+                Annuaire des personnes de la paroisse.
+            </p>
         </div>
-        <div class="modal-body" id="detailBody"></div>
-        <div class="modal-footer">
-            <button class="btn" id="detailEditBtn">✎ Modifier</button>
-            <button class="btn" id="detailArchiveBtn">▣ Archiver</button>
-            <button class="btn btn-danger" id="detailDeleteBtn">Supprimer</button>
+        <div class="settings-actions">
+            <button class="btn" id="importPeopleCsvBtn">⇪ Importer un CSV</button>
+            <button class="btn btn-primary" id="newPersonBtn">＋ Ajouter une personne</button>
         </div>
     </div>
+
+    <section class="panel">
+        <div class="toolbar people-toolbar">
+            <div class="search">
+                <span class="search-icon" aria-hidden="true">⌕</span>
+                <input id="peopleSearchInput" type="search" placeholder="Rechercher un nom, prénom, contact…" autocomplete="off" aria-label="Rechercher une personne">
+            </div>
+        </div>
+
+        <div class="result-count" id="peopleResultCount" aria-live="polite"></div>
+        <div id="peopleList" class="request-list" role="list"></div>
+    </section>
+
+</div>
+
+<!-- ============================================================
+     PERSONNE — DÉTAIL
+============================================================ -->
+<div class="view-page" data-page="person-detail" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="personDetailBackBtn" aria-label="Retour" title="Retour">←</button>
+            <div>
+                <h2 class="page-title" id="personDetailTitle">Personne</h2>
+                <p class="page-description" id="personDetailSubtitle"></p>
+            </div>
+        </div>
+        <div class="settings-actions">
+            <button class="btn" id="personEditBtn">✎ Modifier</button>
+            <button class="btn btn-danger" id="personDeleteBtn">Supprimer</button>
+        </div>
+    </div>
+    <section class="panel">
+        <div class="panel-body" id="personDetailBody"></div>
+    </section>
+</div>
+
+<!-- ============================================================
+     PERSONNE — FORMULAIRE
+============================================================ -->
+<div class="view-page" data-page="person-form" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="personFormBackBtn" aria-label="Retour" title="Retour">←</button>
+            <div>
+                <h2 class="page-title" id="personFormTitle">Nouvelle personne</h2>
+            </div>
+        </div>
+    </div>
+    <section class="panel">
+        <form id="personForm">
+            <div class="panel-body">
+                <input type="hidden" id="personId">
+                <div class="form-grid">
+                    <div class="form-section-title first">Identité</div>
+                    <div class="field">
+                        <label for="personPrenom">Prénom *</label>
+                        <input id="personPrenom" required autocomplete="given-name" placeholder="Ex. Paul">
+                    </div>
+                    <div class="field">
+                        <label for="personNom">Nom *</label>
+                        <input id="personNom" required autocomplete="family-name" placeholder="Ex. de Tarse">
+                    </div>
+                    <div class="field">
+                        <label for="personDateNaissance">Date de naissance</label>
+                        <input id="personDateNaissance" type="date">
+                    </div>
+                    <div class="field">
+                        <label for="personLieuNaissance">Lieu de naissance</label>
+                        <input id="personLieuNaissance" placeholder="Ex. Carmaux">
+                    </div>
+                    <div class="field">
+                        <label for="personPere">Père</label>
+                        <input id="personPere" placeholder="Nom du père">
+                    </div>
+                    <div class="field">
+                        <label for="personMere">Mère</label>
+                        <input id="personMere" placeholder="Nom de la mère">
+                    </div>
+
+                    <div class="form-section-title">Contact</div>
+                    <div class="field">
+                        <label for="personTelephone">Téléphone</label>
+                        <input id="personTelephone" autocomplete="tel">
+                    </div>
+                    <div class="field">
+                        <label for="personEmail">E-mail</label>
+                        <input id="personEmail" type="email" autocomplete="email">
+                    </div>
+                    <div class="field full">
+                        <label for="personAdresse">Adresse</label>
+                        <input id="personAdresse" placeholder="Adresse postale">
+                    </div>
+
+                    <div class="form-section-title">Baptême</div>
+                    <div class="field">
+                        <label for="personRegistre">Registre</label>
+                        <input id="personRegistre" placeholder="Ex. 1962">
+                    </div>
+                    <div class="field">
+                        <label for="personLieuBapteme">Église / lieu de baptême</label>
+                        <input id="personLieuBapteme" placeholder="Ex. Saint Privat de Carmaux">
+                    </div>
+                    <div class="field">
+                        <label for="personDiocese">Diocèse</label>
+                        <input id="personDiocese" placeholder="Ex. Albi">
+                    </div>
+                    <div class="field">
+                        <label for="personAnneeBapteme">Année</label>
+                        <input id="personAnneeBapteme" inputmode="numeric" placeholder="Ex. 1962">
+                    </div>
+                    <div class="field">
+                        <label for="personNumeroBapteme">N° baptême</label>
+                        <input id="personNumeroBapteme" placeholder="Numéro de registre">
+                    </div>
+                    <div class="field">
+                        <label for="personDateBapteme">Date de baptême</label>
+                        <input id="personDateBapteme" type="date">
+                    </div>
+                    <div class="field">
+                        <label for="personParrain">Parrain</label>
+                        <input id="personParrain">
+                    </div>
+                    <div class="field">
+                        <label for="personMarraine">Marraine</label>
+                        <input id="personMarraine">
+                    </div>
+                    <div class="field full">
+                        <label for="personTemoin">Témoin</label>
+                        <input id="personTemoin">
+                    </div>
+
+                    <div class="form-section-title">Confirmation</div>
+                    <div class="field">
+                        <label for="personDateConfirmation">Date de confirmation</label>
+                        <input id="personDateConfirmation" type="date">
+                    </div>
+                    <div class="field">
+                        <label for="personLieuConfirmation">Lieu de confirmation</label>
+                        <input id="personLieuConfirmation">
+                    </div>
+
+                    <div class="form-section-title">Mariage</div>
+                    <div class="field">
+                        <label for="personDateMariage">Date de mariage</label>
+                        <input id="personDateMariage" type="date">
+                    </div>
+                    <div class="field">
+                        <label for="personLieuMariage">Lieu de mariage</label>
+                        <input id="personLieuMariage">
+                    </div>
+                    <div class="field full">
+                        <label for="personConjoint">Conjoint(e)</label>
+                        <input id="personConjoint" placeholder="Nom du conjoint / de la conjointe">
+                    </div>
+
+                    <div class="form-section-title">Observations</div>
+                    <div class="field full">
+                        <label for="personNotes">Notes</label>
+                        <textarea id="personNotes" placeholder="Informations complémentaires…"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <button type="button" class="btn" id="personFormCancelBtn">Annuler</button>
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+</div>
+</main>
+
+<footer class="footer">
+    <span>Secrétariat paroissial · Données stockées localement (Dexie + IndexedDB)</span>
+    <span>Raccourcis : <strong>N</strong> nouvelle · <strong>/</strong> recherche · <strong>Échap</strong> retour</span>
+</footer>
+
+</div>
 </div>
 
 <!-- MODALE PARAMÈTRES -->
@@ -1104,10 +497,10 @@ button:disabled { opacity: .55; cursor: not-allowed; }
         <div class="modal-body">
             <section class="settings-section">
                 <h3 class="settings-title">Paroisse</h3>
-                <p class="settings-description">Ce nom apparaît dans l'en-tête de l'application.</p>
+                <p class="settings-description">Ce nom apparaît dans la barre latérale.</p>
                 <div class="field">
                     <label for="parishName">Nom</label>
-                    <input id="parishName" placeholder="Secrétariat paroissial">
+                    <input id="parishName" placeholder="Secrétariat paroissial de Carmaux-Valence">
                 </div>
             </section>
             <section class="settings-section">
@@ -1149,875 +542,16 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 </div>
 
 <input type="file" id="importFile" accept=".json,application/json" hidden>
+<input type="file" id="importPeopleCsvFile" accept=".csv,text/csv" hidden>
 <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
-<script>
-"use strict";
-
-/* ============================================================
-   CONFIGURATION + DEXIE
-============================================================ */
-const REQUEST_TYPES = [
-    "Certificat de baptême", "Certificat de mariage", "Certificat de décès",
-    "Demande de messe", "Baptême", "Mariage", "Confirmation", "Obsèques",
-    "Rendez-vous", "Inscription", "Document administratif", "Autre"
-];
-
-const STATUS = ["En attente", "En cours", "Terminé", "Annulé"];
-const PRIORITIES = ["Normale", "Urgente"];
-
-// Base Dexie
-const db = new Dexie("paroisse_secretariat");
-
-db.version(5).stores({
-    requests: "id, status, type, priority, dateDemande, deadline, updatedAt, archived, name",
-    history: "id, requestId, createdAt",
-    settings: "key"
-});
-
-/* ============================================================
-   STATE
-============================================================ */
-const state = {
-    requests: [],
-    history: [],
-    view: "active",
-    selectedId: null,
-    importMode: "merge",
-    lastFocused: null,
-    settings: {
-        parishName: "Secrétariat paroissial",
-        lastBackup: null,
-        theme: "light"
-    }
-};
-
-/* ============================================================
-   DOM
-============================================================ */
-const $ = s => document.querySelector(s);
-const $$ = s => Array.from(document.querySelectorAll(s));
-
-/* ============================================================
-   UTILITIES
-============================================================ */
-function uid() {
-    return crypto.randomUUID ? crypto.randomUUID() :
-        Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
-}
-
-function todayISO() {
-    const n = new Date();
-    return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
-}
-
-function nowISO() { return new Date().toISOString(); }
-
-function normalize(v) {
-    return String(v ?? "").toLocaleLowerCase("fr-FR")
-        .normalize("NFD").replace(/\p{Diacritic}/gu, "");
-}
-
-function escapeHTML(v) {
-    return String(v ?? "")
-        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-}
-
-function formatDate(v) {
-    if (!v) return "—";
-    const p = String(v).split("-");
-    if (p.length !== 3) return v;
-    return new Intl.DateTimeFormat("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"})
-        .format(new Date(+p[0], +p[1]-1, +p[2]));
-}
-
-function formatDateTime(v) {
-    if (!v) return "—";
-    return new Intl.DateTimeFormat("fr-FR",{dateStyle:"short",timeStyle:"short"}).format(new Date(v));
-}
-
-function daysBetween(a, b) {
-    const d1 = new Date(a + "T12:00:00");
-    const d2 = new Date(b + "T12:00:00");
-    return Math.round((d2 - d1) / 86400000);
-}
-
-function isOverdue(r) {
-    if (!r.deadline || r.status === "Terminé" || r.status === "Annulé" || r.archived) return false;
-    return r.deadline < todayISO();
-}
-
-function formatDeadline(r) {
-    if (!r.deadline) return { text: "", overdue: false };
-    const overdue = isOverdue(r);
-    const days = daysBetween(todayISO(), r.deadline);
-    let relative = "";
-    if (overdue) {
-        const lag = Math.abs(days);
-        relative = lag === 0 ? "aujourd'hui" : `en retard de ${lag} jour${lag > 1 ? "s" : ""}`;
-    } else if (days === 0) relative = "aujourd'hui";
-    else if (days === 1) relative = "demain";
-    else if (days > 1) relative = `dans ${days} jours`;
-    return {
-        text: `${overdue ? "⚠ " : ""}${formatDate(r.deadline)}${relative ? " · " + relative : ""}`,
-        overdue
-    };
-}
-
-function statusClass(s) {
-    return ({ "En attente":"pending", "En cours":"progress", "Terminé":"done", "Annulé":"cancelled" })[s] || "normal";
-}
-
-function debounce(fn, delay = 200) {
-    let t;
-    return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), delay); };
-}
-
-/* ============================================================
-   THEME
-============================================================ */
-function applyTheme(theme) {
-    document.documentElement.setAttribute("data-theme", theme === "dark" ? "dark" : "light");
-    state.settings.theme = theme;
-    $("#themeBtn").textContent = theme === "dark" ? "☀" : "☾";
-}
-
-async function toggleTheme() {
-    const next = state.settings.theme === "dark" ? "light" : "dark";
-    applyTheme(next);
-    await saveSetting("theme", next);
-}
-
-/* ============================================================
-   SETTINGS & DATA (Dexie)
-============================================================ */
-async function loadSettings() {
-    const items = await db.settings.toArray();
-    for (const item of items) {
-        if (Object.prototype.hasOwnProperty.call(state.settings, item.key)) {
-            state.settings[item.key] = item.value;
-        }
-    }
-    $("#brandTitle").textContent = state.settings.parishName;
-    $("#parishName").value = state.settings.parishName;
-    $("#lastBackup").textContent = state.settings.lastBackup
-        ? formatDateTime(state.settings.lastBackup) : "Jamais";
-    applyTheme(state.settings.theme || "light");
-}
-
-async function saveSetting(key, value) {
-    state.settings[key] = value;
-    await db.settings.put({ key, value });
-}
-
-async function loadData() {
-    state.requests = await db.requests.orderBy("updatedAt").reverse().toArray();
-    state.history = await db.history.toArray();
-}
-
-function createDefaultRequest() {
-    const now = nowISO();
-    return {
-        id: uid(),
-        name: "",
-        contact: "",
-        type: REQUEST_TYPES[0],
-        dateDemande: todayISO(),
-        status: "En attente",
-        priority: "Normale",
-        deadline: "",
-        contactMethod: "",
-        description: "",
-        notes: "",
-        archived: false,
-        createdAt: now,
-        updatedAt: now,
-        completedAt: null
-    };
-}
-
-function normalizeRequest(raw) {
-    const now = nowISO();
-    return {
-        id: String(raw.id || uid()),
-        name: String(raw.name || raw.nom || "").trim(),
-        contact: String(raw.contact || raw.telephone || raw.email || "").trim(),
-        type: REQUEST_TYPES.includes(raw.type) ? raw.type : "Autre",
-        dateDemande: raw.dateDemande || raw.date || todayISO(),
-        status: STATUS.includes(raw.status) ? raw.status
-            : (STATUS.includes(raw.statut) ? raw.statut : "En attente"),
-        priority: PRIORITIES.includes(raw.priority) ? raw.priority
-            : (PRIORITIES.includes(raw.priorite) ? raw.priorite : "Normale"),
-        deadline: raw.deadline || raw.echeance || "",
-        contactMethod: raw.contactMethod || "",
-        description: String(raw.description || raw.details || ""),
-        notes: String(raw.notes || raw.notesInternes || ""),
-        archived: Boolean(raw.archived),
-        createdAt: raw.createdAt || raw.dateCreation || now,
-        updatedAt: raw.updatedAt || raw.dateModification || now,
-        completedAt: raw.completedAt || null
-    };
-}
-
-async function addHistory(requestId, action, description) {
-    await db.history.put({
-        id: uid(),
-        requestId,
-        action,
-        description,
-        createdAt: nowISO()
-    });
-}
-
-/* ============================================================
-   FILTER & RENDER
-============================================================ */
-function filteredRequests() {
-    const query = normalize($("#searchInput").value);
-    const status = $("#statusFilter").value;
-    const type = $("#typeFilter").value;
-
-    let result = state.requests.filter(r => {
-        if (state.view === "active" && r.archived) return false;
-        if (state.view === "archived" && !r.archived) return false;
-        if (status && r.status !== status) return false;
-        if (type && r.type !== type) return false;
-        if (query) {
-            const hay = normalize([r.name, r.contact, r.type, r.status, r.description, r.notes].join(" "));
-            if (!hay.includes(query)) return false;
-        }
-        return true;
-    });
-
-    const sort = $("#sortFilter").value;
-    result.sort((a, b) => {
-        if (sort === "name") return normalize(a.name).localeCompare(normalize(b.name), "fr");
-        if (sort === "deadline") return (a.deadline || "9999-12-31").localeCompare(b.deadline || "9999-12-31");
-        if (sort === "created") return String(b.createdAt).localeCompare(String(a.createdAt));
-        return String(b.updatedAt).localeCompare(String(a.updatedAt));
-    });
-    return result;
-}
-
-function renderTypeFilters() {
-    const select = $("#typeFilter");
-    const current = select.value;
-    select.innerHTML = `<option value="">Tous les types</option>` +
-        REQUEST_TYPES.map(t => `<option value="${escapeHTML(t)}">${escapeHTML(t)}</option>`).join("");
-    select.value = current;
-}
-
-function renderTypeFormOptions() {
-    $("#type").innerHTML = REQUEST_TYPES
-        .map(t => `<option value="${escapeHTML(t)}">${escapeHTML(t)}</option>`).join("");
-}
-
-function renderRequests() {
-    const container = $("#requestList");
-    const requests = filteredRequests();
-    const countEl = $("#resultCount");
-
-    if (!requests.length) {
-        countEl.textContent = "";
-        let msg = "Aucune demande ne correspond aux critères.";
-        if (state.view === "archived") msg = "Aucune demande archivée.";
-        else if (state.view === "active" && !state.requests.some(r => !r.archived)) {
-            msg = "Aucune demande active. Créez-en une avec « Nouvelle demande ».";
-        }
-        container.innerHTML = `<div class="empty">${msg}</div>`;
-        return;
-    }
-
-    countEl.textContent = `${requests.length} demande${requests.length > 1 ? "s" : ""}`;
-    container.innerHTML = requests.map(renderRequestCard).join("");
-}
-
-function renderRequestCard(r) {
-    const overdue = isOverdue(r);
-    const urgent = r.priority === "Urgente";
-    const dl = formatDeadline(r);
-    const canComplete = !r.archived && r.status !== "Terminé" && r.status !== "Annulé";
-
-    return `
-        <article class="request-card ${urgent ? "urgent" : ""} ${overdue ? "overdue" : ""}"
-                 data-request-id="${escapeHTML(r.id)}" role="listitem">
-            <div class="request-person">
-                <div class="request-name">${escapeHTML(r.name || "Sans nom")}</div>
-                <div class="request-contact">${escapeHTML(r.contact || "Aucun contact")}</div>
-            </div>
-            <div>
-                <div class="request-type">${escapeHTML(r.type)}</div>
-                <div class="request-date">Demandée le ${formatDate(r.dateDemande)}</div>
-            </div>
-            <div>
-                <span class="badge ${statusClass(r.status)}">${escapeHTML(r.status)}</span>
-                ${urgent ? `<span class="badge urgent">Urgente</span>` : ""}
-                ${r.deadline ? `<div class="deadline ${dl.overdue ? "overdue" : ""}">${dl.text}</div>` : ""}
-            </div>
-            <div>
-                ${r.archived ? `<span class="badge normal">Archivée</span>` : ""}
-            </div>
-            <div class="request-actions">
-                ${canComplete ? `<button class="icon-btn" data-action="complete" title="Marquer terminé" aria-label="Terminer">✓</button>` : ""}
-                <button class="icon-btn" data-action="open" title="Ouvrir" aria-label="Ouvrir">↗</button>
-                <button class="icon-btn" data-action="edit" title="Modifier" aria-label="Modifier">✎</button>
-                ${!r.archived
-                    ? `<button class="icon-btn" data-action="archive" title="Archiver" aria-label="Archiver">▣</button>`
-                    : `<button class="icon-btn" data-action="restore" title="Restaurer" aria-label="Restaurer">↶</button>`}
-            </div>
-        </article>
-    `;
-}
-
-function renderDashboard() {
-    const active = state.requests.filter(r => !r.archived);
-    $("#statPending").textContent = active.filter(r => r.status === "En attente").length;
-    $("#statProgress").textContent = active.filter(r => r.status === "En cours").length;
-    $("#statDone").textContent = active.filter(r => r.status === "Terminé").length;
-    $("#statAlerts").textContent = active.filter(r => r.priority === "Urgente" || isOverdue(r)).length;
-    $("#storageCount").textContent = state.requests.length;
-
-    const priority = active
-        .filter(r => r.priority === "Urgente" || isOverdue(r))
-        .sort((a, b) => {
-            if (isOverdue(a) !== isOverdue(b)) return isOverdue(a) ? -1 : 1;
-            return String(b.updatedAt).localeCompare(String(a.updatedAt));
-        })
-        .slice(0, 6);
-
-    if (!priority.length) {
-        $("#priorityList").innerHTML = `<div class="empty">Rien de particulier à signaler.</div>`;
-        return;
-    }
-
-    $("#priorityList").innerHTML = priority.map(r => `
-        <div class="alert-item" data-priority-id="${escapeHTML(r.id)}" role="listitem">
-            <div class="alert-marker"></div>
-            <div class="alert-main">
-                <div class="alert-name">${escapeHTML(r.name)}</div>
-                <div class="alert-detail">
-                    ${isOverdue(r) ? "Échéance dépassée" : "Demande urgente"} · ${escapeHTML(r.type)}
-                </div>
-            </div>
-        </div>
-    `).join("");
-}
-
-function renderAll() {
-    renderDashboard();
-    renderRequests();
-}
-
-/* ============================================================
-   MODALS + FOCUS
-============================================================ */
-function getFocusable(container) {
-    return Array.from(container.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    )).filter(el => !el.disabled && el.offsetParent !== null);
-}
-
-function openModal(id) {
-    const backdrop = $("#" + id);
-    state.lastFocused = document.activeElement;
-    backdrop.classList.add("open");
-    backdrop.removeAttribute("hidden");
-    document.body.style.overflow = "hidden";
-    setTimeout(() => {
-        const focusables = getFocusable(backdrop);
-        if (focusables.length) focusables[0].focus();
-    }, 40);
-}
-
-function closeModal(id) {
-    const backdrop = $("#" + id);
-    backdrop.classList.remove("open");
-    backdrop.setAttribute("hidden", "");
-    if (!$$(".modal-backdrop.open").length) document.body.style.overflow = "";
-    if (state.lastFocused?.focus) state.lastFocused.focus();
-}
-
-function closeAllModals() {
-    $$(".modal-backdrop.open").forEach(m => {
-        m.classList.remove("open");
-        m.setAttribute("hidden", "");
-    });
-    document.body.style.overflow = "";
-    if (state.lastFocused?.focus) state.lastFocused.focus();
-}
-
-/* ============================================================
-   CRUD
-============================================================ */
-function openNewRequest() {
-    fillForm(createDefaultRequest());
-    $("#requestModalTitle").textContent = "Nouvelle demande";
-    $("#deadlineError").hidden = true;
-    openModal("requestModal");
-    setTimeout(() => $("#name").focus(), 50);
-}
-
-function editRequest(id) {
-    const r = state.requests.find(x => x.id === id);
-    if (!r) return;
-    fillForm(r);
-    $("#requestModalTitle").textContent = "Modifier la demande";
-    $("#deadlineError").hidden = true;
-    closeModal("detailModal");
-    openModal("requestModal");
-}
-
-function fillForm(r) {
-    $("#requestId").value = r.id || "";
-    $("#name").value = r.name || "";
-    $("#contact").value = r.contact || "";
-    $("#type").value = r.type || REQUEST_TYPES[0];
-    $("#dateDemande").value = r.dateDemande || todayISO();
-    $("#status").value = r.status || "En attente";
-    $("#priority").value = r.priority || "Normale";
-    $("#deadline").value = r.deadline || "";
-    $("#contactMethod").value = r.contactMethod || "";
-    $("#description").value = r.description || "";
-    $("#notes").value = r.notes || "";
-}
-
-async function saveRequest(e) {
-    e.preventDefault();
-    const name = $("#name").value.trim();
-    if (!name) {
-        toast("Le nom est obligatoire.", "error");
-        $("#name").focus();
-        return;
-    }
-
-    const dateDemande = $("#dateDemande").value;
-    const deadline = $("#deadline").value;
-    const errorEl = $("#deadlineError");
-    if (deadline && dateDemande && deadline < dateDemande) {
-        errorEl.textContent = "L'échéance ne peut pas être antérieure à la date de la demande.";
-        errorEl.hidden = false;
-        $("#deadline").focus();
-        return;
-    }
-    errorEl.hidden = true;
-
-    const id = $("#requestId").value.trim();
-    const existing = state.requests.find(r => r.id === id);
-    const now = nowISO();
-
-    const request = existing ? {
-        ...existing,
-        name,
-        contact: $("#contact").value.trim(),
-        type: $("#type").value,
-        dateDemande,
-        status: $("#status").value,
-        priority: $("#priority").value,
-        deadline,
-        contactMethod: $("#contactMethod").value,
-        description: $("#description").value.trim(),
-        notes: $("#notes").value.trim(),
-        updatedAt: now
-    } : {
-        ...createDefaultRequest(),
-        id: id || uid(),
-        name,
-        contact: $("#contact").value.trim(),
-        type: $("#type").value,
-        dateDemande,
-        status: $("#status").value,
-        priority: $("#priority").value,
-        deadline,
-        contactMethod: $("#contactMethod").value,
-        description: $("#description").value.trim(),
-        notes: $("#notes").value.trim(),
-        createdAt: now,
-        updatedAt: now
-    };
-
-    if (request.status === "Terminé" && !request.completedAt) request.completedAt = now;
-    if (request.status !== "Terminé") request.completedAt = null;
-
-    try {
-        await db.requests.put(request);
-        await addHistory(request.id, existing ? "update" : "create",
-            existing ? "Demande modifiée" : "Demande créée");
-        await loadData();
-        renderAll();
-        closeModal("requestModal");
-        toast(existing ? "Demande modifiée." : "Demande créée.", "success");
-    } catch (err) {
-        console.error(err);
-        toast("Impossible d'enregistrer la demande.", "error");
-    }
-}
-
-async function openDetail(id) {
-    const r = state.requests.find(x => x.id === id);
-    if (!r) return;
-    state.selectedId = id;
-
-    $("#detailTitle").textContent = r.name || "Demande sans nom";
-    $("#detailSubtitle").textContent = `${r.type} · ${formatDate(r.dateDemande)}`;
-
-    const history = state.history
-        .filter(h => h.requestId === id)
-        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-
-    const dl = formatDeadline(r);
-
-    $("#detailBody").innerHTML = `
-        <div class="detail-grid">
-            <div class="detail-item">
-                <div class="detail-label">Statut</div>
-                <div class="detail-value"><span class="badge ${statusClass(r.status)}">${escapeHTML(r.status)}</span></div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Priorité</div>
-                <div class="detail-value">
-                    <span class="badge ${r.priority === "Urgente" ? "urgent" : "normal"}">${escapeHTML(r.priority)}</span>
-                </div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Contact</div>
-                <div class="detail-value">${escapeHTML(r.contact || "—")}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Moyen de contact</div>
-                <div class="detail-value">${escapeHTML(r.contactMethod || "—")}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Date de la demande</div>
-                <div class="detail-value">${formatDate(r.dateDemande)}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Échéance</div>
-                <div class="detail-value">
-                    ${r.deadline ? `<span class="${dl.overdue ? "deadline overdue" : "deadline"}">${dl.text}</span>` : "—"}
-                </div>
-            </div>
-            <div class="detail-item full">
-                <div class="detail-label">Demande</div>
-                <div class="detail-value">${escapeHTML(r.description || "Aucune description.")}</div>
-            </div>
-            <div class="detail-item full">
-                <div class="detail-label">Notes internes</div>
-                <div class="detail-value">${escapeHTML(r.notes || "Aucune note.")}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Créée le</div>
-                <div class="detail-value">${formatDateTime(r.createdAt)}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Modifiée le</div>
-                <div class="detail-value">${formatDateTime(r.updatedAt)}</div>
-            </div>
-            ${r.completedAt ? `
-            <div class="detail-item">
-                <div class="detail-label">Terminée le</div>
-                <div class="detail-value">${formatDateTime(r.completedAt)}</div>
-            </div>` : ""}
-        </div>
-        <div class="history">
-            <div class="history-title">Historique</div>
-            ${history.length
-                ? history.map(h => `
-                    <div class="history-item">
-                        <div class="history-dot"></div>
-                        <div>
-                            <div class="history-text">${escapeHTML(h.description)}</div>
-                            <div class="history-date">${formatDateTime(h.createdAt)}</div>
-                        </div>
-                    </div>`).join("")
-                : `<div class="empty">Aucun historique.</div>`}
-        </div>
-    `;
-
-    $("#detailArchiveBtn").textContent = r.archived ? "↶ Restaurer" : "▣ Archiver";
-    openModal("detailModal");
-}
-
-async function toggleArchive(id) {
-    const r = state.requests.find(x => x.id === id);
-    if (!r) return;
-    const archive = !r.archived;
-
-    if (archive && !window.confirm(`Archiver la demande de ${r.name || "cette personne"} ?`)) return;
-
-    r.archived = archive;
-    r.updatedAt = nowISO();
-    await db.requests.put(r);
-    await addHistory(id, archive ? "archive" : "restore", archive ? "Demande archivée" : "Demande restaurée");
-    await loadData();
-    renderAll();
-    closeModal("detailModal");
-    toast(archive ? "Demande archivée." : "Demande restaurée.", "success");
-}
-
-async function markComplete(id) {
-    const r = state.requests.find(x => x.id === id);
-    if (!r || r.status === "Terminé") return;
-
-    r.status = "Terminé";
-    r.completedAt = nowISO();
-    r.updatedAt = nowISO();
-    await db.requests.put(r);
-    await addHistory(id, "complete", "Marquée comme terminée");
-    await loadData();
-    renderAll();
-    toast("Demande terminée.", "success");
-}
-
-async function deleteRequest(id) {
-    const r = state.requests.find(x => x.id === id);
-    if (!r) return;
-    if (!window.confirm(`Supprimer définitivement la demande de ${r.name || "cette personne"} ?\n\nCette action est irréversible.`)) return;
-
-    try {
-        await db.requests.delete(id);
-        await addHistory(id, "delete", "Demande supprimée définitivement");
-        await loadData();
-        renderAll();
-        closeModal("detailModal");
-        toast("Demande supprimée.", "success");
-    } catch (err) {
-        console.error(err);
-        toast("Impossible de supprimer la demande.", "error");
-    }
-}
-
-/* ============================================================
-   EXPORT / IMPORT
-============================================================ */
-async function exportJSON() {
-    const payload = {
-        app: "Paroisse · Secrétariat",
-        version: 5,
-        exportedAt: nowISO(),
-        settings: state.settings,
-        requests: state.requests
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
-    downloadBlob(blob, `paroisse-sauvegarde-${todayISO()}.json`);
-    await saveSetting("lastBackup", nowISO());
-    $("#lastBackup").textContent = formatDateTime(state.settings.lastBackup);
-    toast("Sauvegarde JSON créée.", "success");
-}
-
-function csvEscape(v) {
-    return `"${String(v ?? "").replace(/"/g, '""')}"`;
-}
-
-function exportCSV() {
-    const headers = ["Nom","Contact","Type","Date demande","Statut","Priorité","Échéance","Moyen contact","Description","Notes","Archivée","Créée le","Modifiée le"];
-    const rows = state.requests.map(r => [
-        r.name, r.contact, r.type, r.dateDemande, r.status, r.priority,
-        r.deadline, r.contactMethod, r.description, r.notes,
-        r.archived ? "Oui" : "Non", r.createdAt, r.updatedAt
-    ]);
-    const csv = "\uFEFF" + [headers, ...rows].map(row => row.map(csvEscape).join(";")).join("\r\n");
-    downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `paroisse-demandes-${todayISO()}.csv`);
-    toast("Export CSV créé.", "success");
-}
-
-function downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function selectImportFile(mode) {
-    state.importMode = mode;
-    $("#importFile").value = "";
-    $("#importFile").click();
-}
-
-async function importFile(file) {
-    if (!file) return;
-    try {
-        const parsed = JSON.parse(await file.text());
-        const raw = Array.isArray(parsed) ? parsed : parsed.requests;
-        if (!Array.isArray(raw)) throw new Error("Format JSON non reconnu.");
-
-        const imported = raw.map(normalizeRequest).filter(r => r.name || r.description || r.contact);
-        if (!imported.length) throw new Error("Le fichier ne contient aucune demande exploitable.");
-
-        if (state.importMode === "replace") {
-            if (!window.confirm(`Remplacer toutes les données actuelles par ${imported.length} demande(s) ?`)) return;
-            await db.requests.clear();
-        }
-
-        let added = 0;
-        for (const req of imported) {
-            if (state.importMode === "merge" && state.requests.some(e => e.id === req.id)) {
-                req.id = uid();
-            }
-            await db.requests.put(req);
-            added++;
-        }
-        await loadData();
-        renderAll();
-        toast(`${added} demande(s) importée(s).`, "success");
-    } catch (err) {
-        console.error(err);
-        toast("Import impossible : " + err.message, "error");
-    }
-}
-
-async function clearDatabase() {
-    if (window.prompt("Pour confirmer l'effacement complet, tapez : EFFACER") !== "EFFACER") {
-        toast("Effacement annulé.");
-        return;
-    }
-    await db.requests.clear();
-    await db.history.clear();
-    await loadData();
-    renderAll();
-    toast("Toutes les demandes ont été supprimées.", "success");
-}
-
-async function saveSettings() {
-    const name = $("#parishName").value.trim() || "Secrétariat paroissial";
-    await saveSetting("parishName", name);
-    $("#brandTitle").textContent = name;
-    closeModal("settingsModal");
-    toast("Paramètres enregistrés.", "success");
-}
-
-/* ============================================================
-   TOAST
-============================================================ */
-function toast(msg, type = "") {
-    const el = document.createElement("div");
-    el.className = `toast ${type}`;
-    el.textContent = msg;
-    $("#toastContainer").appendChild(el);
-    setTimeout(() => el.remove(), 3400);
-}
-
-/* ============================================================
-   EVENTS
-============================================================ */
-$("#requestList").addEventListener("click", async e => {
-    const btn = e.target.closest("[data-action]");
-    const card = e.target.closest("[data-request-id]");
-    if (!card) return;
-    const id = card.dataset.requestId;
-
-    if (!btn) { openDetail(id); return; }
-
-    switch (btn.dataset.action) {
-        case "open": openDetail(id); break;
-        case "edit": editRequest(id); break;
-        case "archive":
-        case "restore": await toggleArchive(id); break;
-        case "complete": await markComplete(id); break;
-    }
-});
-
-$("#priorityList").addEventListener("click", e => {
-    const item = e.target.closest("[data-priority-id]");
-    if (item) openDetail(item.dataset.priorityId);
-});
-
-$("#requestForm").addEventListener("submit", saveRequest);
-$("#newRequestBtn").addEventListener("click", openNewRequest);
-$("#settingsBtn").addEventListener("click", () => openModal("settingsModal"));
-$("#exportJsonBtn").addEventListener("click", exportJSON);
-$("#settingsExportJson").addEventListener("click", exportJSON);
-$("#settingsExportCsv").addEventListener("click", exportCSV);
-$("#saveSettingsBtn").addEventListener("click", saveSettings);
-$("#clearDataBtn").addEventListener("click", clearDatabase);
-$("#mergeImportBtn").addEventListener("click", () => selectImportFile("merge"));
-$("#replaceImportBtn").addEventListener("click", () => selectImportFile("replace"));
-$("#importBtn").addEventListener("click", () => selectImportFile("merge"));
-$("#importFile").addEventListener("change", e => importFile(e.target.files[0]));
-$("#themeBtn").addEventListener("click", toggleTheme);
-$("#settingsThemeBtn").addEventListener("click", toggleTheme);
-
-$("#detailEditBtn").addEventListener("click", () => state.selectedId && editRequest(state.selectedId));
-$("#detailArchiveBtn").addEventListener("click", () => state.selectedId && toggleArchive(state.selectedId));
-$("#detailDeleteBtn").addEventListener("click", () => state.selectedId && deleteRequest(state.selectedId));
-
-$$("[data-close-modal]").forEach(btn => {
-    btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
-});
-
-$$(".modal-backdrop").forEach(b => {
-    b.addEventListener("mousedown", e => { if (e.target === b) closeModal(b.id); });
-});
-
-const debouncedRender = debounce(renderRequests, 200);
-$("#searchInput").addEventListener("input", debouncedRender);
-$("#statusFilter").addEventListener("change", renderRequests);
-$("#typeFilter").addEventListener("change", renderRequests);
-$("#sortFilter").addEventListener("change", renderRequests);
-
-$$(".tab").forEach(tab => {
-    tab.addEventListener("click", () => {
-        $$(".tab").forEach(t => {
-            t.classList.remove("active");
-            t.setAttribute("aria-selected", "false");
-        });
-        tab.classList.add("active");
-        tab.setAttribute("aria-selected", "true");
-        state.view = tab.dataset.view;
-        renderRequests();
-    });
-});
-
-document.addEventListener("keydown", e => {
-    const tag = document.activeElement?.tagName;
-    const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
-
-    if (e.key === "Escape") { closeAllModals(); return; }
-
-    if (e.key === "Tab") {
-        const open = $(".modal-backdrop.open");
-        if (open) {
-            const f = getFocusable(open);
-            if (!f.length) return;
-            if (e.shiftKey && document.activeElement === f[0]) {
-                e.preventDefault(); f[f.length-1].focus();
-            } else if (!e.shiftKey && document.activeElement === f[f.length-1]) {
-                e.preventDefault(); f[0].focus();
-            }
-        }
-    }
-
-    if (e.key === "/" && !typing) { e.preventDefault(); $("#searchInput").focus(); }
-    if (e.key.toLowerCase() === "n" && !typing && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        openNewRequest();
-    }
-});
-
-/* ============================================================
-   INIT
-============================================================ */
-async function init() {
-    try {
-        await db.open();
-        renderTypeFilters();
-        renderTypeFormOptions();
-        await loadSettings();
-        await loadData();
-        renderAll();
-        $("#storageStatus").textContent = "✓ Dexie prêt";
-        toast("Secrétariat prêt.", "success");
-    } catch (err) {
-        console.error(err);
-        $("#storageStatus").textContent = "Erreur";
-        toast("Impossible d'ouvrir la base : " + err.message, "error");
-    }
-}
-
-init();
-</script>
+<script src="js/db.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/csv.js"></script>
+<script src="js/state.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/people.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/main.js"></script>
+</body>
 </html>
