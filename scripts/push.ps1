@@ -1,5 +1,5 @@
 param(
-    [string]$Message = "Update"
+    [string]$Message
 )
 
 # Push script for gParoisse - targets https://github.com/paroissecarmaux/gParoisse.git
@@ -22,6 +22,14 @@ $hasChanges = (git status --porcelain)
 
 if ($hasChanges) {
     git add -A
+
+    if (-not $Message) {
+        $Message = Read-Host "Message de commit"
+    }
+    if (-not $Message) {
+        $Message = "Update"
+    }
+
     git commit -m $Message
 } else {
     Write-Host "No local changes to commit - pushing existing commits only."
