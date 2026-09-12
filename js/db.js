@@ -30,3 +30,15 @@ db.version(7).stores({
     people: "id, nom, prenom, updatedAt",
     schedule: "id, kind, dayOfWeek, date, updatedAt"
 });
+
+// v8 : ajout du référentiel des clochers de la paroisse, recherchable
+// depuis les demandes, annonces et fiches personnes pour lier un lieu
+// de cérémonie à une fiche précise plutôt qu'à du texte libre.
+db.version(8).stores({
+    requests: "id, status, type, priority, dateDemande, deadline, updatedAt, archived, name",
+    history: "id, requestId, createdAt",
+    settings: "key",
+    people: "id, nom, prenom, updatedAt",
+    schedule: "id, kind, dayOfWeek, date, updatedAt",
+    clochers: "id, nom, commune, updatedAt"
+});

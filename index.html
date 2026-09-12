@@ -46,6 +46,11 @@
 <symbol id="i-alert-triangle" viewBox="0 0 24 24"><polygon points="12,3 22,20 2,20"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="16.8" r="0.9" fill="currentColor" stroke="none"/></symbol>
 <symbol id="i-file" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><polyline points="14,3 14,8 19,8"/><line x1="9.5" y1="13" x2="14.5" y2="13"/><line x1="9.5" y1="16.5" x2="14.5" y2="16.5"/></symbol>
 <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6"/><polyline points="4,17 20,17"/><path d="M9 20a3 3 0 0 0 6 0"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15"/><line x1="4" y1="9" x2="20" y2="9"/><line x1="8" y1="3" x2="8" y2="6"/><line x1="16" y1="3" x2="16" y2="6"/></symbol>
+<symbol id="i-chevron-down" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20"/><line x1="10" y1="18" x2="14" y2="18"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14"/><polyline points="3,6 12,13 21,6"/></symbol>
+<symbol id="i-church" viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="6"/><line x1="10" y1="4" x2="14" y2="4"/><polyline points="6,11 12,6 18,11"/><line x1="12" y1="6" x2="12" y2="10"/><rect x="6" y="11" width="12" height="10"/><polyline points="10,21 10,15 14,15 14,21"/></symbol>
 </defs>
 </svg>
 
@@ -66,11 +71,17 @@
         <button class="nav-item" data-page="requests" type="button" aria-selected="false">
             <svg class="icon"><use href="#i-file"></use></svg> Demandes
         </button>
+        <button class="nav-item" data-page="agenda" type="button" aria-selected="false">
+            <svg class="icon"><use href="#i-calendar"></use></svg> Agenda
+        </button>
         <button class="nav-item" data-page="people" type="button" aria-selected="false">
             <svg class="icon"><use href="#i-person"></use></svg> Les personnes
         </button>
         <button class="nav-item" data-page="announcements" type="button" aria-selected="false">
             <svg class="icon"><use href="#i-bell"></use></svg> Annonces
+        </button>
+        <button class="nav-item" data-page="clochers" type="button" aria-selected="false">
+            <svg class="icon"><use href="#i-church"></use></svg> Clochers
         </button>
     </nav>
     <div class="sidebar-footer">
@@ -167,6 +178,10 @@
                 <div id="announceMesses" class="alert-list" role="list"></div>
             </div>
             <div class="announce-group">
+                <h4 class="announce-group-title">Horaires paroissiaux</h4>
+                <div id="announceHoraires" class="alert-list" role="list"></div>
+            </div>
+            <div class="announce-group">
                 <h4 class="announce-group-title">Anniversaires</h4>
                 <div id="announceAnniversaires" class="alert-list" role="list"></div>
             </div>
@@ -188,12 +203,25 @@
             </p>
         </div>
         <div class="settings-actions">
+            <button type="button" class="btn" data-csv-export="requests"><svg class="icon"><use href="#i-download"></use></svg> Export CSV</button>
+            <button type="button" class="btn" data-csv-import="requests"><svg class="icon"><use href="#i-upload"></use></svg> Import CSV</button>
             <button class="btn btn-primary" id="newRequestBtn"><svg class="icon"><use href="#i-plus"></use></svg> Nouvelle demande</button>
         </div>
     </div>
 
-    <!-- KPI (cliquables : filtrent la liste ci-dessous) -->
+    <!-- KPI (cliquables : filtrent la liste ci-dessous)
+         Ordre : vue d'ensemble (Toutes), puis le pipeline dans l'ordre
+         chronologique du traitement (attente → en cours → terminé),
+         puis ce qui sort du flux normal (à surveiller, archivées). -->
     <section class="kpis" id="requestKpis" aria-label="Indicateurs">
+        <button type="button" class="kpi total" data-kpi="all">
+            <div class="kpi-top">
+                <span class="kpi-label">Toutes les demandes</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-file"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="statTotal">0</div>
+            <div class="kpi-note">Actives et archivées</div>
+        </button>
         <button type="button" class="kpi pending" data-kpi="En attente">
             <div class="kpi-top">
                 <span class="kpi-label">En attente</span>
@@ -225,14 +253,6 @@
             </div>
             <div class="kpi-value" id="statAlerts">0</div>
             <div class="kpi-note">Urgentes ou en retard</div>
-        </button>
-        <button type="button" class="kpi total" data-kpi="all">
-            <div class="kpi-top">
-                <span class="kpi-label">Toutes les demandes</span>
-                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-file"></use></svg></div>
-            </div>
-            <div class="kpi-value" id="statTotal">0</div>
-            <div class="kpi-note">Actives et archivées</div>
         </button>
         <button type="button" class="kpi archived" data-kpi="archived">
             <div class="kpi-top">
@@ -271,6 +291,7 @@
 
         <div class="result-count" id="resultCount" aria-live="polite"></div>
         <div id="requestList" class="request-list" role="list"></div>
+        <div id="requestPagination" class="pagination"></div>
     </section>
 
 </div>
@@ -315,9 +336,13 @@
             <div class="panel-body">
                 <input type="hidden" id="requestId">
                 <div class="form-grid">
-                    <div class="field">
+                    <div class="form-section-title first">Demande</div>
+                    <div class="field autocomplete-field">
                         <label for="name">Nom et prénom *</label>
-                        <input id="name" name="name" required autocomplete="name" placeholder="Ex. Jean Dupont">
+                        <input id="name" name="name" required autocomplete="off" placeholder="Ex. Jean Dupont — recherche dans les personnes">
+                        <input type="hidden" id="requestPersonId">
+                        <div class="dropdown-menu" id="nameAutocompleteMenu" hidden></div>
+                        <div class="field-help">Tapez au moins 2 lettres pour retrouver une personne déjà enregistrée et lier la demande à sa fiche.</div>
                     </div>
                     <div class="field">
                         <label for="contact">Téléphone / e-mail</label>
@@ -330,11 +355,6 @@
                     <div class="field">
                         <label for="dateDemande">Date de la demande</label>
                         <input id="dateDemande" name="dateDemande" type="date">
-                    </div>
-                    <div class="field">
-                        <label for="dateEvenement">Date de la cérémonie</label>
-                        <input id="dateEvenement" name="dateEvenement" type="date">
-                        <div class="field-help">Messe, obsèques, mariage, baptême… utilisée pour les annonces du jour.</div>
                     </div>
                     <div class="field">
                         <label for="status">Statut</label>
@@ -353,12 +373,6 @@
                         </select>
                     </div>
                     <div class="field">
-                        <label for="deadline">Échéance</label>
-                        <input id="deadline" name="deadline" type="date">
-                        <div class="field-help">Permet de repérer automatiquement les retards.</div>
-                        <div class="field-error" id="deadlineError" hidden></div>
-                    </div>
-                    <div class="field">
                         <label for="contactMethod">Moyen de contact préféré</label>
                         <select id="contactMethod">
                             <option value="">Non précisé</option>
@@ -368,6 +382,36 @@
                             <option value="Accueil">Accueil au secrétariat</option>
                         </select>
                     </div>
+
+                    <div class="form-section-title" id="eventSectionTitle" hidden>Cérémonie</div>
+                    <div class="field" id="fieldDateEvenement" hidden>
+                        <label for="dateEvenement">Date de la cérémonie</label>
+                        <input id="dateEvenement" name="dateEvenement" type="date">
+                    </div>
+                    <div class="field" id="fieldHeureEvenement" hidden>
+                        <label for="heureEvenement">Heure</label>
+                        <input id="heureEvenement" name="heureEvenement" type="time">
+                    </div>
+                    <div class="field full autocomplete-field" id="fieldLieuEvenement" hidden>
+                        <label for="lieuEvenement">Lieu</label>
+                        <input id="lieuEvenement" autocomplete="off" placeholder="Ex. Église Saint-Privat de Carmaux — recherche dans les clochers">
+                        <input type="hidden" id="requestClocherId">
+                        <div class="dropdown-menu" id="lieuEvenementAutocompleteMenu" hidden></div>
+                    </div>
+                    <div class="field full" id="fieldDefunt" hidden>
+                        <label for="defunt">Nom du défunt</label>
+                        <input id="defunt" placeholder="Nom et prénom du défunt">
+                    </div>
+
+                    <div class="form-section-title">Échéance</div>
+                    <div class="field">
+                        <label for="deadline">Échéance administrative</label>
+                        <input id="deadline" name="deadline" type="date">
+                        <div class="field-help">Permet de repérer automatiquement les retards.</div>
+                        <div class="field-error" id="deadlineError" hidden></div>
+                    </div>
+
+                    <div class="form-section-title">Contenu</div>
                     <div class="field full">
                         <label for="description">Description de la demande</label>
                         <textarea id="description" name="description" placeholder="Décrivez précisément la demande…"></textarea>
@@ -399,10 +443,48 @@
             </p>
         </div>
         <div class="settings-actions">
-            <button class="btn" id="importPeopleCsvBtn"><svg class="icon"><use href="#i-upload"></use></svg> Importer un CSV</button>
+            <button type="button" class="btn" data-csv-export="people"><svg class="icon"><use href="#i-download"></use></svg> Export CSV</button>
+            <button type="button" class="btn" data-csv-import="people"><svg class="icon"><use href="#i-upload"></use></svg> Import CSV</button>
+            <button class="btn" id="importPeopleCsvBtn"><svg class="icon"><use href="#i-upload"></use></svg> Importer un CSV (registre)</button>
             <button class="btn btn-primary" id="newPersonBtn"><svg class="icon"><use href="#i-plus"></use></svg> Ajouter une personne</button>
         </div>
     </div>
+
+    <!-- KPI (cliquables : filtrent la liste ci-dessous) -->
+    <section class="kpis" id="peopleKpis" aria-label="Indicateurs">
+        <button type="button" class="kpi total" data-kpi="all">
+            <div class="kpi-top">
+                <span class="kpi-label">Toutes les personnes</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-person"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="peopleStatTotal">0</div>
+            <div class="kpi-note">Enregistrées dans l'annuaire</div>
+        </button>
+        <button type="button" class="kpi progress" data-kpi="paroissien">
+            <div class="kpi-top">
+                <span class="kpi-label">Paroissiens</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-cross"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="peopleStatParoissiens">0</div>
+            <div class="kpi-note">Fiche paroissiale complète</div>
+        </button>
+        <button type="button" class="kpi normal" data-kpi="contact">
+            <div class="kpi-top">
+                <span class="kpi-label">Contacts</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-mail"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="peopleStatContacts">0</div>
+            <div class="kpi-note">Contacts simples / hors-paroisse</div>
+        </button>
+        <button type="button" class="kpi alert" data-kpi="rgpd">
+            <div class="kpi-top">
+                <span class="kpi-label">RGPD à recueillir</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-alert-triangle"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="peopleStatRgpd">0</div>
+            <div class="kpi-note">Paroissiens sans consentement enregistré</div>
+        </button>
+    </section>
 
     <section class="panel">
         <div class="toolbar people-toolbar">
@@ -414,6 +496,7 @@
 
         <div class="result-count" id="peopleResultCount" aria-live="polite"></div>
         <div id="peopleList" class="request-list" role="list"></div>
+        <div id="peoplePagination" class="pagination"></div>
     </section>
 
 </div>
@@ -430,13 +513,22 @@
             </div>
         </div>
         <div class="settings-actions">
+            <div class="dropdown">
+                <button type="button" class="btn" id="personDocsBtn" aria-haspopup="true" aria-expanded="false">
+                    <svg class="icon"><use href="#i-file"></use></svg> Documents
+                </button>
+                <div class="dropdown-menu" id="personDocsMenu" hidden>
+                    <button type="button" class="dropdown-item" data-cert="bapteme">Certificat de baptême</button>
+                    <button type="button" class="dropdown-item" data-cert="communion">Certificat de communion</button>
+                    <button type="button" class="dropdown-item" data-cert="confirmation">Certificat de confirmation</button>
+                    <button type="button" class="dropdown-item" data-cert="mariage">Certificat de mariage</button>
+                </div>
+            </div>
             <button class="btn" id="personEditBtn"><svg class="icon"><use href="#i-edit"></use></svg> Modifier</button>
             <button class="btn btn-danger" id="personDeleteBtn"><svg class="icon"><use href="#i-trash"></use></svg> Supprimer</button>
         </div>
     </div>
-    <section class="panel">
-        <div id="personDetailBody"></div>
-    </section>
+    <div id="personDetailBody"></div>
 </div>
 
 <!-- ============================================================
@@ -456,7 +548,17 @@
             <div class="panel-body">
                 <input type="hidden" id="personId">
                 <div class="form-grid">
-                    <div class="form-section-title first">Identité</div>
+                    <div class="form-section-title first">Type de profil</div>
+                    <div class="field full">
+                        <label for="personProfileType">Profil</label>
+                        <select id="personProfileType">
+                            <option value="paroissien">Paroissien (fiche complète)</option>
+                            <option value="contact">Contact simple / externe</option>
+                        </select>
+                        <div class="field-help">Un « Contact simple » n'affiche ni ne conserve aucune donnée paroissiale (sacrements, groupes…).</div>
+                    </div>
+
+                    <div class="form-section-title">Identité</div>
                     <div class="field">
                         <label for="personPrenom">Prénom *</label>
                         <input id="personPrenom" required autocomplete="given-name" placeholder="Ex. Paul">
@@ -473,14 +575,6 @@
                         <label for="personLieuNaissance">Lieu de naissance</label>
                         <input id="personLieuNaissance" placeholder="Ex. Carmaux">
                     </div>
-                    <div class="field">
-                        <label for="personPere">Père</label>
-                        <input id="personPere" placeholder="Nom du père">
-                    </div>
-                    <div class="field">
-                        <label for="personMere">Mère</label>
-                        <input id="personMere" placeholder="Nom de la mère">
-                    </div>
 
                     <div class="form-section-title">Contact</div>
                     <div class="field">
@@ -496,66 +590,102 @@
                         <input id="personAdresse" placeholder="Adresse postale">
                     </div>
 
-                    <div class="form-section-title">Baptême</div>
-                    <div class="field">
+                    <div class="form-section-title paroissial-only">Foyer &amp; RGPD</div>
+                    <div class="field paroissial-only">
+                        <label for="personPere">Père</label>
+                        <input id="personPere" placeholder="Nom du père">
+                    </div>
+                    <div class="field paroissial-only">
+                        <label for="personMere">Mère</label>
+                        <input id="personMere" placeholder="Nom de la mère">
+                    </div>
+                    <div class="field full paroissial-only">
+                        <label class="checkbox-label" for="personRgpd">
+                            <input type="checkbox" id="personRgpd">
+                            Consentement RGPD obtenu (conservation des données personnelles)
+                        </label>
+                    </div>
+
+                    <div class="form-section-title paroissial-only">Baptême</div>
+                    <div class="field paroissial-only">
                         <label for="personRegistre">Registre</label>
                         <input id="personRegistre" placeholder="Ex. 1962">
                     </div>
-                    <div class="field">
+                    <div class="field paroissial-only">
                         <label for="personLieuBapteme">Église / lieu de baptême</label>
                         <input id="personLieuBapteme" placeholder="Ex. Saint Privat de Carmaux">
                     </div>
-                    <div class="field">
+                    <div class="field paroissial-only">
                         <label for="personDiocese">Diocèse</label>
                         <input id="personDiocese" placeholder="Ex. Albi">
                     </div>
-                    <div class="field">
+                    <div class="field paroissial-only">
                         <label for="personAnneeBapteme">Année</label>
                         <input id="personAnneeBapteme" inputmode="numeric" placeholder="Ex. 1962">
                     </div>
-                    <div class="field">
+                    <div class="field paroissial-only">
                         <label for="personNumeroBapteme">N° baptême</label>
                         <input id="personNumeroBapteme" placeholder="Numéro de registre">
                     </div>
-                    <div class="field">
+                    <div class="field paroissial-only">
                         <label for="personDateBapteme">Date de baptême</label>
                         <input id="personDateBapteme" type="date">
                     </div>
-                    <div class="field">
+                    <div class="field paroissial-only">
                         <label for="personParrain">Parrain</label>
                         <input id="personParrain">
                     </div>
-                    <div class="field">
+                    <div class="field paroissial-only">
                         <label for="personMarraine">Marraine</label>
                         <input id="personMarraine">
                     </div>
-                    <div class="field full">
+                    <div class="field full paroissial-only">
                         <label for="personTemoin">Témoin</label>
                         <input id="personTemoin">
                     </div>
 
-                    <div class="form-section-title">Confirmation</div>
-                    <div class="field">
+                    <div class="form-section-title paroissial-only">Communion</div>
+                    <div class="field paroissial-only">
+                        <label for="personDateCommunion">Date de communion</label>
+                        <input id="personDateCommunion" type="date">
+                    </div>
+                    <div class="field paroissial-only">
+                        <label for="personLieuCommunion">Lieu</label>
+                        <input id="personLieuCommunion">
+                    </div>
+
+                    <div class="form-section-title paroissial-only">Confirmation</div>
+                    <div class="field paroissial-only">
                         <label for="personDateConfirmation">Date de confirmation</label>
                         <input id="personDateConfirmation" type="date">
                     </div>
-                    <div class="field">
+                    <div class="field paroissial-only">
                         <label for="personLieuConfirmation">Lieu de confirmation</label>
                         <input id="personLieuConfirmation">
                     </div>
 
-                    <div class="form-section-title">Mariage</div>
-                    <div class="field">
+                    <div class="form-section-title paroissial-only">Mariage</div>
+                    <div class="field paroissial-only">
                         <label for="personDateMariage">Date de mariage</label>
                         <input id="personDateMariage" type="date">
                     </div>
-                    <div class="field">
+                    <div class="field paroissial-only">
                         <label for="personLieuMariage">Lieu de mariage</label>
                         <input id="personLieuMariage">
                     </div>
-                    <div class="field full">
+                    <div class="field full paroissial-only">
                         <label for="personConjoint">Conjoint(e)</label>
                         <input id="personConjoint" placeholder="Nom du conjoint / de la conjointe">
+                    </div>
+
+                    <div class="form-section-title paroissial-only">Groupes &amp; engagements</div>
+                    <div class="field paroissial-only">
+                        <label for="personRole">Rôle</label>
+                        <input id="personRole" placeholder="Ex. Catéchiste, servant d'autel…">
+                    </div>
+                    <div class="field full paroissial-only">
+                        <label for="personGroupe">Groupe / caté</label>
+                        <input id="personGroupe" placeholder="Ex. Caté CE2, chorale, scouts…">
                     </div>
 
                     <div class="form-section-title">Observations</div>
@@ -574,20 +704,339 @@
 </div>
 
 <!-- ============================================================
-     ANNONCES
+     ANNONCES — LISTE
 ============================================================ -->
 <div class="view-page" data-page="announcements" hidden>
 
     <div class="page-header">
         <div>
             <h2 class="page-title">Annonces</h2>
-            <p class="page-description">Annonces et bulletin paroissial.</p>
+            <p class="page-description">Horaires des messes, confessions et événements paroissiaux, récurrents ou ponctuels.</p>
+        </div>
+        <div class="settings-actions">
+            <button type="button" class="btn" data-csv-export="schedule"><svg class="icon"><use href="#i-download"></use></svg> Export CSV</button>
+            <button type="button" class="btn" data-csv-import="schedule"><svg class="icon"><use href="#i-upload"></use></svg> Import CSV</button>
+            <button class="btn btn-primary" id="newScheduleBtn"><svg class="icon"><use href="#i-plus"></use></svg> Nouvelle annonce</button>
+        </div>
+    </div>
+
+    <!-- KPI (cliquables : filtrent la liste ci-dessous) -->
+    <section class="kpis" id="scheduleKpis" aria-label="Indicateurs">
+        <button type="button" class="kpi total" data-kpi="all">
+            <div class="kpi-top">
+                <span class="kpi-label">Toutes les annonces</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-bell"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="scheduleStatTotal">0</div>
+            <div class="kpi-note">Récurrentes et ponctuelles</div>
+        </button>
+        <button type="button" class="kpi progress" data-kpi="recurring">
+            <div class="kpi-top">
+                <span class="kpi-label">Récurrentes</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-refresh"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="scheduleStatRecurring">0</div>
+            <div class="kpi-note">Chaque semaine</div>
+        </button>
+        <button type="button" class="kpi normal" data-kpi="once">
+            <div class="kpi-top">
+                <span class="kpi-label">Ponctuelles</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-calendar"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="scheduleStatOnce">0</div>
+            <div class="kpi-note">Date unique</div>
+        </button>
+        <button type="button" class="kpi archived" data-kpi="inactive">
+            <div class="kpi-top">
+                <span class="kpi-label">Suspendues</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-archive"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="scheduleStatInactive">0</div>
+            <div class="kpi-note">Désactivées</div>
+        </button>
+    </section>
+
+    <section class="panel">
+        <div class="result-count" id="scheduleResultCount" aria-live="polite"></div>
+        <div id="scheduleList" class="request-list" role="list"></div>
+    </section>
+
+</div>
+
+<!-- ============================================================
+     ANNONCE — DÉTAIL
+============================================================ -->
+<div class="view-page" data-page="schedule-detail" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="scheduleDetailBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+            <div>
+                <h2 class="page-title" id="scheduleDetailTitle">Annonce</h2>
+            </div>
+        </div>
+        <div class="settings-actions">
+            <button class="btn" id="scheduleEditBtn"><svg class="icon"><use href="#i-edit"></use></svg> Modifier</button>
+            <button class="btn" id="scheduleDetailToggleBtn"><svg class="icon"><use href="#i-archive"></use></svg> Suspendre</button>
+            <button class="btn btn-danger" id="scheduleDeleteBtn"><svg class="icon"><use href="#i-trash"></use></svg> Supprimer</button>
+        </div>
+    </div>
+    <section class="panel">
+        <div id="scheduleDetailBody"></div>
+    </section>
+</div>
+
+<!-- ============================================================
+     ANNONCE — FORMULAIRE
+============================================================ -->
+<div class="view-page" data-page="schedule-form" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="scheduleFormBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+            <div>
+                <h2 class="page-title" id="scheduleFormTitle">Nouvelle annonce</h2>
+            </div>
+        </div>
+    </div>
+    <section class="panel">
+        <form id="scheduleForm">
+            <div class="panel-body">
+                <input type="hidden" id="scheduleId">
+                <div class="form-grid">
+                    <div class="field full">
+                        <label for="scheduleTitle">Titre *</label>
+                        <input id="scheduleTitle" required placeholder="Ex. Messe dominicale">
+                    </div>
+                    <div class="field">
+                        <label for="scheduleCategory">Catégorie</label>
+                        <select id="scheduleCategory"></select>
+                    </div>
+                    <div class="field">
+                        <label for="scheduleKind">Récurrence</label>
+                        <select id="scheduleKind">
+                            <option value="recurring">Chaque semaine</option>
+                            <option value="once">Date unique</option>
+                        </select>
+                    </div>
+                    <div class="field" id="fieldDayOfWeek">
+                        <label for="scheduleDayOfWeek">Jour de la semaine</label>
+                        <select id="scheduleDayOfWeek">
+                            <option value="1">Lundi</option>
+                            <option value="2">Mardi</option>
+                            <option value="3">Mercredi</option>
+                            <option value="4">Jeudi</option>
+                            <option value="5">Vendredi</option>
+                            <option value="6">Samedi</option>
+                            <option value="0">Dimanche</option>
+                        </select>
+                    </div>
+                    <div class="field" id="fieldScheduleDate" hidden>
+                        <label for="scheduleDate">Date</label>
+                        <input id="scheduleDate" type="date">
+                    </div>
+                    <div class="field">
+                        <label for="scheduleTime">Heure</label>
+                        <input id="scheduleTime" type="time">
+                    </div>
+                    <div class="field full autocomplete-field">
+                        <label for="scheduleLocation">Lieu</label>
+                        <input id="scheduleLocation" autocomplete="off" placeholder="Ex. Église Saint-Privat de Carmaux — recherche dans les clochers">
+                        <input type="hidden" id="scheduleClocherId">
+                        <div class="dropdown-menu" id="scheduleLocationAutocompleteMenu" hidden></div>
+                    </div>
+                    <div class="field full">
+                        <label for="scheduleNotes">Notes</label>
+                        <textarea id="scheduleNotes" placeholder="Informations complémentaires…"></textarea>
+                    </div>
+                    <div class="field full">
+                        <label class="checkbox-label" for="scheduleActive">
+                            <input type="checkbox" id="scheduleActive" checked>
+                            Annonce active
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <button type="button" class="btn" id="scheduleFormCancelBtn">Annuler</button>
+                <button type="submit" class="btn btn-primary"><svg class="icon"><use href="#i-check"></use></svg> Enregistrer</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+<!-- ============================================================
+     CLOCHERS — LISTE
+============================================================ -->
+<div class="view-page" data-page="clochers" hidden>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Clochers</h2>
+            <p class="page-description">Référentiel des églises de la paroisse, recherchable depuis les demandes et les annonces.</p>
+        </div>
+        <div class="settings-actions">
+            <button type="button" class="btn" data-csv-export="clochers"><svg class="icon"><use href="#i-download"></use></svg> Export CSV</button>
+            <button type="button" class="btn" data-csv-import="clochers"><svg class="icon"><use href="#i-upload"></use></svg> Import CSV</button>
+            <button class="btn btn-primary" id="newClocherBtn"><svg class="icon"><use href="#i-plus"></use></svg> Nouveau clocher</button>
+        </div>
+    </div>
+
+    <!-- KPI (cliquables : filtrent la liste ci-dessous) -->
+    <section class="kpis" id="clocherKpis" aria-label="Indicateurs">
+        <button type="button" class="kpi total" data-kpi="all">
+            <div class="kpi-top">
+                <span class="kpi-label">Tous les clochers</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-church"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="clocherStatTotal">0</div>
+            <div class="kpi-note">Les 2 secteurs</div>
+        </button>
+        <button type="button" class="kpi progress" data-kpi="Carmaux">
+            <div class="kpi-top">
+                <span class="kpi-label">Secteur Carmaux</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-church"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="clocherStatCarmaux">0</div>
+            <div class="kpi-note">Clochers du secteur</div>
+        </button>
+        <button type="button" class="kpi normal" data-kpi="Valence">
+            <div class="kpi-top">
+                <span class="kpi-label">Secteur Valence</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-church"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="clocherStatValence">0</div>
+            <div class="kpi-note">Clochers du secteur</div>
+        </button>
+        <button type="button" class="kpi archived" data-kpi="inactive">
+            <div class="kpi-top">
+                <span class="kpi-label">Inactifs</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-archive"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="clocherStatInactive">0</div>
+            <div class="kpi-note">Désactivés</div>
+        </button>
+    </section>
+
+    <section class="panel">
+        <div class="result-count" id="clocherResultCount" aria-live="polite"></div>
+        <div id="clocherList" class="request-list" role="list"></div>
+    </section>
+
+</div>
+
+<!-- ============================================================
+     CLOCHER — DÉTAIL
+============================================================ -->
+<div class="view-page" data-page="clocher-detail" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="clocherDetailBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+            <div>
+                <h2 class="page-title" id="clocherDetailTitle">Clocher</h2>
+            </div>
+        </div>
+        <div class="settings-actions">
+            <button class="btn" id="clocherEditBtn"><svg class="icon"><use href="#i-edit"></use></svg> Modifier</button>
+            <button class="btn" id="clocherDetailToggleBtn"><svg class="icon"><use href="#i-archive"></use></svg> Désactiver</button>
+            <button class="btn btn-danger" id="clocherDeleteBtn"><svg class="icon"><use href="#i-trash"></use></svg> Supprimer</button>
+        </div>
+    </div>
+    <section class="panel">
+        <div id="clocherDetailBody"></div>
+    </section>
+</div>
+
+<!-- ============================================================
+     CLOCHER — FORMULAIRE
+============================================================ -->
+<div class="view-page" data-page="clocher-form" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="clocherFormBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+            <div>
+                <h2 class="page-title" id="clocherFormTitle">Nouveau clocher</h2>
+            </div>
+        </div>
+    </div>
+    <section class="panel">
+        <form id="clocherForm">
+            <div class="panel-body">
+                <input type="hidden" id="clocherId">
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="clocherNom">Nom *</label>
+                        <input id="clocherNom" required placeholder="Ex. Église Saint-Privat">
+                    </div>
+                    <div class="field">
+                        <label for="clocherCommune">Commune</label>
+                        <input id="clocherCommune" placeholder="Ex. Carmaux">
+                    </div>
+                    <div class="field">
+                        <label for="clocherSecteur">Secteur</label>
+                        <select id="clocherSecteur">
+                            <option value="Carmaux">Carmaux</option>
+                            <option value="Valence">Valence</option>
+                        </select>
+                    </div>
+                    <div class="field full">
+                        <label for="clocherAdresse">Adresse</label>
+                        <input id="clocherAdresse" placeholder="Adresse postale">
+                    </div>
+                    <div class="field">
+                        <label for="clocherSaintPatron">Saint patron</label>
+                        <input id="clocherSaintPatron" placeholder="Ex. Saint Privat">
+                    </div>
+                    <div class="field">
+                        <label for="clocherFetePatronale">Fête patronale</label>
+                        <input id="clocherFetePatronale" placeholder="Ex. 21 août">
+                    </div>
+                    <div class="field full">
+                        <label for="clocherNotes">Notes</label>
+                        <textarea id="clocherNotes" placeholder="Informations complémentaires…"></textarea>
+                    </div>
+                    <div class="field full">
+                        <label class="checkbox-label" for="clocherActive">
+                            <input type="checkbox" id="clocherActive" checked>
+                            Clocher actif
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <button type="button" class="btn" id="clocherFormCancelBtn">Annuler</button>
+                <button type="submit" class="btn btn-primary"><svg class="icon"><use href="#i-check"></use></svg> Enregistrer</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+<!-- ============================================================
+     AGENDA
+============================================================ -->
+<div class="view-page" data-page="agenda" hidden>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Agenda</h2>
+            <p class="page-description">Cérémonies, messes et annonces de la paroisse.</p>
+        </div>
+        <div class="settings-actions">
+            <div class="segmented" id="agendaViewToggle">
+                <button type="button" class="segmented-btn active" data-agenda-view="week">Semaine</button>
+                <button type="button" class="segmented-btn" data-agenda-view="day">Jour</button>
+            </div>
+            <button class="btn" id="agendaTodayBtn">Aujourd'hui</button>
         </div>
     </div>
 
     <section class="panel">
+        <div class="panel-header agenda-toolbar">
+            <button class="icon-btn" id="agendaPrevBtn" aria-label="Période précédente"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+            <h3 class="panel-title" id="agendaRangeLabel"></h3>
+            <button class="icon-btn" id="agendaNextBtn" aria-label="Période suivante"><svg class="icon icon-flip"><use href="#i-arrow-left"></use></svg></button>
+        </div>
         <div class="panel-body">
-            <div class="empty">Aucune annonce pour l'instant. Ce module arrivera bientôt.</div>
+            <div id="agendaWeekView" class="agenda-week"></div>
+            <div id="agendaDayView" class="agenda-day" hidden></div>
         </div>
     </section>
 
@@ -624,12 +1073,11 @@
         <section class="settings-section">
             <h3 class="settings-title">Données</h3>
             <p class="settings-description">
-                Faites régulièrement une sauvegarde JSON.
-                Le stockage du navigateur n'est pas un système de sauvegarde sécurisé.
+                L'export JSON sauvegarde l'intégralité des données (demandes, personnes, annonces).
+                Faites-en une régulièrement : le stockage du navigateur n'est pas un système de sauvegarde sécurisé.
             </p>
             <div class="settings-actions">
-                <button class="btn" id="settingsExportJson"><svg class="icon"><use href="#i-download"></use></svg> Export JSON</button>
-                <button class="btn" id="settingsExportCsv"><svg class="icon"><use href="#i-download"></use></svg> Export CSV</button>
+                <button class="btn" id="settingsExportJson"><svg class="icon"><use href="#i-download"></use></svg> Export JSON complet</button>
                 <button class="btn" id="importBtn"><svg class="icon"><use href="#i-upload"></use></svg> Importer</button>
                 <button class="btn btn-danger" id="clearDataBtn"><svg class="icon"><use href="#i-trash"></use></svg> Effacer toutes les données</button>
             </div>
@@ -637,11 +1085,33 @@
         <section class="settings-section">
             <h3 class="settings-title">Importation</h3>
             <p class="settings-description">
-                Fusionner ou remplacer complètement la base actuelle.
+                À partir d'une sauvegarde JSON complète : fusionner avec les données actuelles, ou tout remplacer.
             </p>
             <div class="settings-actions">
                 <button class="btn" id="mergeImportBtn">Fusionner un fichier</button>
                 <button class="btn" id="replaceImportBtn">Remplacer par un fichier</button>
+            </div>
+        </section>
+        <section class="settings-section" id="csvModulesSection">
+            <h3 class="settings-title">Export / import CSV par base</h3>
+            <p class="settings-description">
+                Chaque base peut être exportée et réimportée séparément au format CSV (tableur). La colonne « ID » permet de mettre à jour un enregistrement existant lors d'une réimportation plutôt que de le dupliquer.
+            </p>
+            <div class="settings-actions">
+                <button type="button" class="btn" data-csv-export="requests"><svg class="icon"><use href="#i-download"></use></svg> Demandes — export CSV</button>
+                <button type="button" class="btn" data-csv-import="requests"><svg class="icon"><use href="#i-upload"></use></svg> Demandes — import CSV</button>
+            </div>
+            <div class="settings-actions">
+                <button type="button" class="btn" data-csv-export="people"><svg class="icon"><use href="#i-download"></use></svg> Personnes — export CSV</button>
+                <button type="button" class="btn" data-csv-import="people"><svg class="icon"><use href="#i-upload"></use></svg> Personnes — import CSV</button>
+            </div>
+            <div class="settings-actions">
+                <button type="button" class="btn" data-csv-export="schedule"><svg class="icon"><use href="#i-download"></use></svg> Annonces — export CSV</button>
+                <button type="button" class="btn" data-csv-import="schedule"><svg class="icon"><use href="#i-upload"></use></svg> Annonces — import CSV</button>
+            </div>
+            <div class="settings-actions">
+                <button type="button" class="btn" data-csv-export="clochers"><svg class="icon"><use href="#i-download"></use></svg> Clochers — export CSV</button>
+                <button type="button" class="btn" data-csv-import="clochers"><svg class="icon"><use href="#i-upload"></use></svg> Clochers — import CSV</button>
             </div>
         </section>
         <div class="panel-footer">
@@ -664,6 +1134,7 @@
 
 <input type="file" id="importFile" accept=".json,application/json" hidden>
 <input type="file" id="importPeopleCsvFile" accept=".csv,text/csv" hidden>
+<input type="file" id="importCsvFile" accept=".csv,text/csv" hidden>
 <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
 <script src="js/db.js"></script>
@@ -673,7 +1144,10 @@
 <script src="js/state.js"></script>
 <script src="js/requests.js"></script>
 <script src="js/people.js"></script>
+<script src="js/schedule.js"></script>
+<script src="js/clochers.js"></script>
 <script src="js/overview.js"></script>
+<script src="js/agenda.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/main.js"></script>
 </body>

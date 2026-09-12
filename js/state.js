@@ -7,14 +7,28 @@ const state = {
     requests: [],
     history: [],
     people: [],
+    schedule: [],
+    clochers: [],
     page: "overview",
     view: "active",
     quickFilter: null,
+    peopleQuickFilter: null,
+    scheduleQuickFilter: null,
+    clocherQuickFilter: null,
+    peoplePage: 1,
+    requestsPage: 1,
     selectedId: null,
     selectedPersonId: null,
+    selectedScheduleId: null,
+    selectedClocherId: null,
     requestFormMode: "new",
     personFormMode: "new",
+    scheduleFormMode: "new",
+    clocherFormMode: "new",
+    agendaView: "week",
+    agendaDate: todayISO(),
     importMode: "merge",
+    csvImportModuleKey: "requests",
     settings: {
         parishName: "Secrétariat paroissial de Carmaux-Valence",
         lastBackup: null,
@@ -37,6 +51,12 @@ const PAGE_SECTION = {
     "person-detail": "people",
     "person-form": "people",
     "announcements": "announcements",
+    "schedule-detail": "announcements",
+    "schedule-form": "announcements",
+    "clochers": "clochers",
+    "clocher-detail": "clochers",
+    "clocher-form": "clochers",
+    "agenda": "agenda",
     "settings": "settings"
 };
 
@@ -61,6 +81,10 @@ function pageBackTarget(page) {
         case "person-detail": return "people";
         case "request-form": return state.requestFormMode === "edit" ? "request-detail" : "requests";
         case "person-form": return state.personFormMode === "edit" ? "person-detail" : "people";
+        case "schedule-detail": return "announcements";
+        case "schedule-form": return state.scheduleFormMode === "edit" ? "schedule-detail" : "announcements";
+        case "clocher-detail": return "clochers";
+        case "clocher-form": return state.clocherFormMode === "edit" ? "clocher-detail" : "clochers";
         default: return null;
     }
 }

@@ -6,11 +6,41 @@
 const REQUEST_TYPES = [
     "Certificat de baptême", "Certificat de mariage", "Certificat de décès",
     "Demande de messe", "Baptême", "Mariage", "Confirmation", "Obsèques",
-    "Rendez-vous", "Inscription", "Document administratif", "Autre"
+    "Concert", "Réunion paroissiale", "Rendez-vous", "Inscription",
+    "Document administratif", "Autre"
 ];
 
 const STATUS = ["En attente", "En cours", "Terminé", "Annulé"];
 const PRIORITIES = ["Normale", "Urgente"];
+
+// Toutes les demandes ne se gèrent pas pareil : un certificat est un
+// document à délivrer, un événement a une date/heure/lieu de cérémonie
+// à suivre (et alimente l'agenda). Cette catégorisation pilote
+// l'affichage du formulaire et de la fiche.
+const REQUEST_TYPE_CATEGORY = {
+    "Certificat de baptême": "certificate",
+    "Certificat de mariage": "certificate",
+    "Certificat de décès": "certificate",
+    "Document administratif": "certificate",
+    "Demande de messe": "event",
+    "Baptême": "event",
+    "Mariage": "event",
+    "Confirmation": "event",
+    "Obsèques": "event",
+    "Concert": "event",
+    "Réunion paroissiale": "event",
+    "Rendez-vous": "event",
+    "Inscription": "admin",
+    "Autre": "admin"
+};
+
+function requestCategory(type) {
+    return REQUEST_TYPE_CATEGORY[type] || "admin";
+}
+
+function requestIsEvent(r) {
+    return requestCategory(r.type) === "event";
+}
 
 async function loadRequestsData() {
     state.requests = await db.requests.orderBy("updatedAt").reverse().toArray();
@@ -22,10 +52,15 @@ function createDefaultRequest() {
     return {
         id: uid(),
         name: "",
+        personId: "",
         contact: "",
         type: REQUEST_TYPES[0],
         dateDemande: todayISO(),
         dateEvenement: "",
+        heureEvenement: "",
+        lieuEvenement: "",
+        clocherId: "",
+        defunt: "",
         status: "En attente",
         priority: "Normale",
         deadline: "",
@@ -44,10 +79,15 @@ function normalizeRequest(raw) {
     return {
         id: String(raw.id || uid()),
         name: String(raw.name || raw.nom || "").trim(),
+        personId: String(raw.personId || ""),
         contact: String(raw.contact || raw.telephone || raw.email || "").trim(),
         type: REQUEST_TYPES.includes(raw.type) ? raw.type : "Autre",
         dateDemande: raw.dateDemande || raw.date || todayISO(),
         dateEvenement: raw.dateEvenement || raw.dateCeremonie || "",
+        heureEvenement: raw.heureEvenement || "",
+        lieuEvenement: raw.lieuEvenement || "",
+        clocherId: String(raw.clocherId || ""),
+        defunt: raw.defunt || "",
         status: STATUS.includes(raw.status) ? raw.status
             : (STATUS.includes(raw.statut) ? raw.statut : "En attente"),
         priority: PRIORITIES.includes(raw.priority) ? raw.priority
@@ -121,12 +161,10 @@ function filteredRequests() {
     });
 
     const sort = $("#sortFilter").value;
-    result.sort((a, b) => {
-        if (sort === "name") return normalize(a.name).localeCompare(normalize(b.name), "fr");
-        if (sort === "deadline") return (a.deadline || "9999-12-31").localeCompare(b.deadline || "9999-12-31");
-        if (sort === "created") return String(b.createdAt).localeCompare(String(a.createdAt));
-        return String(b.updatedAt).localeCompare(String(a.updatedAt));
-    });
+    if (sort === "name") result = sortByKey(result, r => normalize(r.name));
+    else if (sort === "deadline") result = sortByKey(result, r => r.deadline || "9999-12-31");
+    else if (sort === "created") result = sortByKey(result, r => r.createdAt).reverse();
+    else result = sortByKey(result, r => r.updatedAt).reverse();
     return result;
 }
 
@@ -143,6 +181,8 @@ function renderTypeFormOptions() {
         .map(t => `<option value="${escapeHTML(t)}">${escapeHTML(t)}</option>`).join("");
 }
 
+const REQUESTS_PAGE_SIZE = 60;
+
 function renderRequests() {
     const container = $("#requestList");
     const requests = filteredRequests();
@@ -156,11 +196,16 @@ function renderRequests() {
             msg = "Aucune demande active. Créez-en une avec « Nouvelle demande ».";
         }
         container.innerHTML = `<div class="empty">${msg}</div>`;
+        $("#requestPagination").innerHTML = "";
         return;
     }
 
+    const { pageItems, page, totalPages } = paginate(requests, state.requestsPage, REQUESTS_PAGE_SIZE);
+    state.requestsPage = page;
+
     countEl.textContent = `${requests.length} demande${requests.length > 1 ? "s" : ""}`;
-    container.innerHTML = requests.map(renderRequestCard).join("");
+    container.innerHTML = pageItems.map(renderRequestCard).join("");
+    $("#requestPagination").innerHTML = paginationControlsHTML(page, totalPages);
 }
 
 function renderRequestCard(r) {
@@ -179,7 +224,9 @@ function renderRequestCard(r) {
             </div>
             <div>
                 <div class="request-type">${escapeHTML(r.type)}</div>
-                <div class="request-date">Demandée le ${formatDate(r.dateDemande)}</div>
+                <div class="request-date">${requestIsEvent(r) && r.dateEvenement
+                    ? `${r.type === "Obsèques" && r.defunt ? "Obsèques de " + escapeHTML(r.defunt) + " · " : ""}${formatDate(r.dateEvenement)}${r.heureEvenement ? " à " + escapeHTML(r.heureEvenement) : ""}`
+                    : `Demandée le ${formatDate(r.dateDemande)}`}</div>
             </div>
             <div>
                 <div class="badge-row">
@@ -215,6 +262,7 @@ function filterRequestsByKpi(kpi) {
     $("#typeFilter").value = "";
     $("#statusFilter").value = "";
     state.quickFilter = null;
+    state.requestsPage = 1;
 
     if (kpi === "all") {
         state.view = "all";
@@ -235,19 +283,53 @@ function filterRequestsByKpi(kpi) {
 /* ============================================================
    PAGES PLEIN ÉCRAN
 ============================================================ */
+/* ============================================================
+   RECHERCHE DE PERSONNE (lie la demande à une fiche existante)
+============================================================ */
+function personSuggestionLabel(p) {
+    const contact = [p.telephone, p.email].filter(Boolean).join(" · ");
+    return `${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}${contact ? " — " + escapeHTML(contact) : ""}`;
+}
+
+function linkRequestToPerson(person) {
+    $("#name").value = `${person.prenom} ${person.nom}`.trim();
+    $("#requestPersonId").value = person.id;
+    if (!$("#contact").value.trim()) {
+        $("#contact").value = person.telephone || person.email || "";
+    }
+}
+
 function fillRequestForm(r) {
     $("#requestId").value = r.id || "";
     $("#name").value = r.name || "";
+    $("#requestPersonId").value = r.personId || "";
+    $("#nameAutocompleteMenu").hidden = true;
     $("#contact").value = r.contact || "";
     $("#type").value = r.type || REQUEST_TYPES[0];
     $("#dateDemande").value = r.dateDemande || todayISO();
     $("#dateEvenement").value = r.dateEvenement || "";
+    $("#heureEvenement").value = r.heureEvenement || "";
+    $("#lieuEvenement").value = r.lieuEvenement || "";
+    $("#requestClocherId").value = r.clocherId || "";
+    $("#lieuEvenementAutocompleteMenu").hidden = true;
+    $("#defunt").value = r.defunt || "";
     $("#status").value = r.status || "En attente";
     $("#priority").value = r.priority || "Normale";
     $("#deadline").value = r.deadline || "";
     $("#contactMethod").value = r.contactMethod || "";
     $("#description").value = r.description || "";
     $("#notes").value = r.notes || "";
+    updateRequestFormFields();
+}
+
+function updateRequestFormFields() {
+    const type = $("#type").value;
+    const isEvent = requestCategory(type) === "event";
+    $("#eventSectionTitle").hidden = !isEvent;
+    $("#fieldDateEvenement").hidden = !isEvent;
+    $("#fieldHeureEvenement").hidden = !isEvent;
+    $("#fieldLieuEvenement").hidden = !isEvent;
+    $("#fieldDefunt").hidden = !(isEvent && type === "Obsèques");
 }
 
 function showRequestForm(id) {
@@ -284,15 +366,28 @@ async function saveRequest(e) {
     const existing = state.requests.find(r => r.id === id);
     const now = nowISO();
 
-    const dateEvenement = $("#dateEvenement").value;
+    const type = $("#type").value;
+    const isEvent = requestCategory(type) === "event";
+    const dateEvenement = isEvent ? $("#dateEvenement").value : "";
+    const heureEvenement = isEvent ? $("#heureEvenement").value.trim() : "";
+    const lieuEvenement = isEvent ? $("#lieuEvenement").value.trim() : "";
+    const clocherId = isEvent ? $("#requestClocherId").value.trim() : "";
+    const defunt = (isEvent && type === "Obsèques") ? $("#defunt").value.trim() : "";
+
+    const personId = $("#requestPersonId").value.trim();
 
     const request = existing ? {
         ...existing,
         name,
+        personId,
         contact: $("#contact").value.trim(),
-        type: $("#type").value,
+        type,
         dateDemande,
         dateEvenement,
+        heureEvenement,
+        lieuEvenement,
+        clocherId,
+        defunt,
         status: $("#status").value,
         priority: $("#priority").value,
         deadline,
@@ -304,10 +399,15 @@ async function saveRequest(e) {
         ...createDefaultRequest(),
         id: id || uid(),
         name,
+        personId,
         contact: $("#contact").value.trim(),
-        type: $("#type").value,
+        type,
         dateDemande,
         dateEvenement,
+        heureEvenement,
+        lieuEvenement,
+        clocherId,
+        defunt,
         status: $("#status").value,
         priority: $("#priority").value,
         deadline,
@@ -329,6 +429,7 @@ async function saveRequest(e) {
         renderRequestsSummary();
         renderRequests();
         renderOverview();
+        renderAgenda();
         toast(existing ? "Demande modifiée." : "Demande créée.", "success");
         showRequestDetail(request.id);
     } catch (err) {
@@ -341,6 +442,9 @@ function showRequestDetail(id) {
     const r = state.requests.find(x => x.id === id);
     if (!r) return;
     state.selectedId = id;
+
+    const linkedPerson = r.personId ? state.people.find(p => p.id === r.personId) : null;
+    const linkedClocher = r.clocherId ? state.clochers.find(c => c.id === r.clocherId) : null;
 
     $("#requestDetailTitle").textContent = r.name || "Demande sans nom";
     $("#requestDetailSubtitle").textContent = `${r.type} · ${formatDate(r.dateDemande)}`;
@@ -369,16 +473,31 @@ function showRequestDetail(id) {
             <h4 class="fiche-section-title">Suivi</h4>
             <dl class="fiche-grid">
                 ${ficheField("Date de la demande", formatDate(r.dateDemande))}
-                ${ficheField("Date de la cérémonie", formatDate(r.dateEvenement))}
                 ${ficheField("Échéance", r.deadline ? `<span class="${dl.overdue ? "deadline overdue" : "deadline"}">${dl.text}</span>` : "")}
             </dl>
         </div>
+
+        ${requestIsEvent(r) ? `
+        <div class="fiche-section">
+            <h4 class="fiche-section-title">Cérémonie</h4>
+            <dl class="fiche-grid">
+                ${ficheField("Date", formatDate(r.dateEvenement))}
+                ${ficheField("Heure", escapeHTML(r.heureEvenement))}
+                ${ficheField("Lieu", linkedClocher
+                    ? `<button type="button" class="link-btn" data-goto-clocher="${escapeHTML(linkedClocher.id)}">${escapeHTML(linkedClocher.nom)}</button>`
+                    : escapeHTML(r.lieuEvenement), true)}
+                ${r.type === "Obsèques" ? ficheField("Défunt", escapeHTML(r.defunt), true) : ""}
+            </dl>
+        </div>` : ""}
 
         <div class="fiche-section">
             <h4 class="fiche-section-title">Contact</h4>
             <dl class="fiche-grid">
                 ${ficheField("Contact", escapeHTML(r.contact))}
                 ${ficheField("Moyen de contact", escapeHTML(r.contactMethod))}
+                ${ficheField("Personne liée", linkedPerson
+                    ? `<button type="button" class="link-btn" data-goto-person="${escapeHTML(linkedPerson.id)}">${escapeHTML(linkedPerson.prenom)} ${escapeHTML(linkedPerson.nom)}</button>`
+                    : (r.personId ? "Personne introuvable (supprimée)" : ""), true)}
             </dl>
         </div>
 
@@ -434,6 +553,7 @@ async function toggleArchive(id) {
     renderRequestsSummary();
     renderRequests();
     renderOverview();
+    renderAgenda();
     toast(archive ? "Demande archivée." : "Demande restaurée.", "success");
     showPage("requests");
 }
@@ -466,6 +586,7 @@ async function deleteRequest(id) {
         renderRequestsSummary();
         renderRequests();
         renderOverview();
+        renderAgenda();
         toast("Demande supprimée.", "success");
         showPage("requests");
     } catch (err) {
@@ -501,6 +622,22 @@ function initRequestsEvents() {
     });
 
     $("#requestForm").addEventListener("submit", saveRequest);
+    $("#type").addEventListener("change", updateRequestFormFields);
+
+    $("#name").addEventListener("input", () => { $("#requestPersonId").value = ""; });
+    setupAutocomplete($("#name"), $("#nameAutocompleteMenu"), {
+        search: personSuggestions,
+        renderLabel: personSuggestionLabel,
+        onSelect: linkRequestToPerson
+    });
+
+    $("#lieuEvenement").addEventListener("input", () => { $("#requestClocherId").value = ""; });
+    setupAutocomplete($("#lieuEvenement"), $("#lieuEvenementAutocompleteMenu"), {
+        search: clocherSuggestions,
+        renderLabel: clocherSuggestionLabel,
+        onSelect: c => { $("#lieuEvenement").value = c.nom; $("#requestClocherId").value = c.id; }
+    });
+
     $("#newRequestBtn").addEventListener("click", () => showRequestForm(null));
     $("#requestFormBackBtn").addEventListener("click", goBack);
     $("#requestFormCancelBtn").addEventListener("click", goBack);
@@ -510,9 +647,24 @@ function initRequestsEvents() {
     $("#requestDetailArchiveBtn").addEventListener("click", () => state.selectedId && toggleArchive(state.selectedId));
     $("#requestDetailDeleteBtn").addEventListener("click", () => state.selectedId && deleteRequest(state.selectedId));
 
-    const debouncedRender = debounce(() => { state.quickFilter = null; renderRequests(); }, 200);
+    $("#requestDetailBody").addEventListener("click", e => {
+        const personBtn = e.target.closest("[data-goto-person]");
+        if (personBtn) { showPersonDetail(personBtn.dataset.gotoPerson); return; }
+        const clocherBtn = e.target.closest("[data-goto-clocher]");
+        if (clocherBtn) showClocherDetail(clocherBtn.dataset.gotoClocher);
+    });
+
+    const debouncedRender = debounce(() => { state.quickFilter = null; state.requestsPage = 1; renderRequests(); }, 200);
     $("#searchInput").addEventListener("input", debouncedRender);
-    $("#statusFilter").addEventListener("change", () => { state.quickFilter = null; renderRequests(); });
-    $("#typeFilter").addEventListener("change", () => { state.quickFilter = null; renderRequests(); });
-    $("#sortFilter").addEventListener("change", renderRequests);
+    $("#statusFilter").addEventListener("change", () => { state.quickFilter = null; state.requestsPage = 1; renderRequests(); });
+    $("#typeFilter").addEventListener("change", () => { state.quickFilter = null; state.requestsPage = 1; renderRequests(); });
+    $("#sortFilter").addEventListener("change", () => { state.requestsPage = 1; renderRequests(); });
+
+    $("#requestPagination").addEventListener("click", e => {
+        const btn = e.target.closest("[data-page-nav]");
+        if (!btn || btn.disabled) return;
+        state.requestsPage += btn.dataset.pageNav === "next" ? 1 : -1;
+        renderRequests();
+        $("#requestList").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
 }
