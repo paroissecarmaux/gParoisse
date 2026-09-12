@@ -86,6 +86,11 @@ function ficheField(label, value, full) {
     `;
 }
 
+function truncate(str, n) {
+    const s = String(str || "");
+    return s.length > n ? s.slice(0, n - 1) + "…" : s;
+}
+
 function initials(name) {
     const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
     if (!parts.length) return "?";

@@ -44,7 +44,8 @@
 <symbol id="i-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></symbol>
 <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><polyline points="12,7.5 12,12.3 15.8,14.3"/></symbol>
 <symbol id="i-alert-triangle" viewBox="0 0 24 24"><polygon points="12,3 22,20 2,20"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="16.8" r="0.9" fill="currentColor" stroke="none"/></symbol>
-<symbol id="i-x" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><polyline points="14,3 14,8 19,8"/><line x1="9.5" y1="13" x2="14.5" y2="13"/><line x1="9.5" y1="16.5" x2="14.5" y2="16.5"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6"/><polyline points="4,17 20,17"/><path d="M9 20a3 3 0 0 0 6 0"/></symbol>
 </defs>
 </svg>
 
@@ -59,13 +60,24 @@
         </div>
     </div>
     <nav class="sidebar-nav" aria-label="Navigation principale">
-        <button class="nav-item active" data-page="dashboard" type="button" aria-selected="true">
+        <button class="nav-item active" data-page="overview" type="button" aria-selected="true">
             <svg class="icon"><use href="#i-home"></use></svg> Tableau de bord
+        </button>
+        <button class="nav-item" data-page="requests" type="button" aria-selected="false">
+            <svg class="icon"><use href="#i-file"></use></svg> Demandes
         </button>
         <button class="nav-item" data-page="people" type="button" aria-selected="false">
             <svg class="icon"><use href="#i-person"></use></svg> Les personnes
         </button>
+        <button class="nav-item" data-page="announcements" type="button" aria-selected="false">
+            <svg class="icon"><use href="#i-bell"></use></svg> Annonces
+        </button>
     </nav>
+    <div class="sidebar-footer">
+        <button class="nav-item" data-page="settings" type="button" aria-selected="false">
+            <svg class="icon"><use href="#i-settings"></use></svg> Paramètres
+        </button>
+    </div>
 </aside>
 
 <div class="app-content">
@@ -90,108 +102,150 @@
 <div class="container">
 
 <!-- ============================================================
-     TABLEAU DE BORD
+     TABLEAU DE BORD (vue d'ensemble)
 ============================================================ -->
-<div class="view-page" data-page="dashboard">
+<div class="view-page" data-page="overview">
 
     <div class="page-header">
         <div>
             <h2 class="page-title">Tableau de bord</h2>
+            <p class="page-description">Vue d'ensemble de la paroisse.</p>
+        </div>
+    </div>
+
+    <!-- KPI (cliquables) -->
+    <section class="kpis" id="overviewKpis" aria-label="Indicateurs">
+        <button type="button" class="kpi people" data-kpi="people">
+            <div class="kpi-top">
+                <span class="kpi-label">Personnes</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-person"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="overviewPeopleCount">0</div>
+            <div class="kpi-note">Enregistrées dans l'annuaire</div>
+        </button>
+        <button type="button" class="kpi pending" data-kpi="pending">
+            <div class="kpi-top">
+                <span class="kpi-label">Demandes en attente</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-clock"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="overviewPendingCount">0</div>
+            <div class="kpi-note">À prendre en charge</div>
+        </button>
+        <button type="button" class="kpi alert" data-kpi="alert">
+            <div class="kpi-top">
+                <span class="kpi-label">À surveiller</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-alert-triangle"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="overviewAlertCount">0</div>
+            <div class="kpi-note">Urgentes ou en retard</div>
+        </button>
+        <button type="button" class="kpi announce" data-kpi="announce">
+            <div class="kpi-top">
+                <span class="kpi-label">Annonces du jour</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-bell"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="overviewAnnounceCount">0</div>
+            <div class="kpi-note">Obsèques, messes, anniversaires</div>
+        </button>
+    </section>
+
+    <!-- Annonces du jour -->
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h3 class="panel-title">Annonces du jour</h3>
+                <p class="panel-subtitle" id="overviewTodayLabel"></p>
+            </div>
+        </div>
+        <div class="panel-body">
+            <div class="announce-group">
+                <h4 class="announce-group-title">Obsèques</h4>
+                <div id="announceObseques" class="alert-list" role="list"></div>
+            </div>
+            <div class="announce-group">
+                <h4 class="announce-group-title">Messes</h4>
+                <div id="announceMesses" class="alert-list" role="list"></div>
+            </div>
+            <div class="announce-group">
+                <h4 class="announce-group-title">Anniversaires</h4>
+                <div id="announceAnniversaires" class="alert-list" role="list"></div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<!-- ============================================================
+     DEMANDES
+============================================================ -->
+<div class="view-page" data-page="requests" hidden>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Demandes</h2>
             <p class="page-description">
                 Suivez les demandes, les échéances et les tâches à traiter.
             </p>
         </div>
         <div class="settings-actions">
             <button class="btn btn-primary" id="newRequestBtn"><svg class="icon"><use href="#i-plus"></use></svg> Nouvelle demande</button>
-            <button class="btn" id="settingsBtn"><svg class="icon"><use href="#i-settings"></use></svg> Paramètres</button>
         </div>
     </div>
 
-    <!-- KPI -->
-    <section class="kpis" aria-label="Indicateurs">
-        <div class="kpi pending">
+    <!-- KPI (cliquables : filtrent la liste ci-dessous) -->
+    <section class="kpis" id="requestKpis" aria-label="Indicateurs">
+        <button type="button" class="kpi pending" data-kpi="En attente">
             <div class="kpi-top">
                 <span class="kpi-label">En attente</span>
                 <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-clock"></use></svg></div>
             </div>
             <div class="kpi-value" id="statPending">0</div>
             <div class="kpi-note">Demandes à prendre en charge</div>
-        </div>
-        <div class="kpi progress">
+        </button>
+        <button type="button" class="kpi progress" data-kpi="En cours">
             <div class="kpi-top">
                 <span class="kpi-label">En cours</span>
                 <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-refresh"></use></svg></div>
             </div>
             <div class="kpi-value" id="statProgress">0</div>
             <div class="kpi-note">Dossiers actuellement traités</div>
-        </div>
-        <div class="kpi done">
+        </button>
+        <button type="button" class="kpi done" data-kpi="Terminé">
             <div class="kpi-top">
                 <span class="kpi-label">Terminées</span>
                 <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-check-circle"></use></svg></div>
             </div>
             <div class="kpi-value" id="statDone">0</div>
             <div class="kpi-note">Demandes clôturées</div>
-        </div>
-        <div class="kpi alert">
+        </button>
+        <button type="button" class="kpi alert" data-kpi="alert">
             <div class="kpi-top">
                 <span class="kpi-label">À surveiller</span>
                 <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-alert-triangle"></use></svg></div>
             </div>
             <div class="kpi-value" id="statAlerts">0</div>
             <div class="kpi-note">Urgentes ou en retard</div>
-        </div>
-    </section>
-
-    <!-- Dashboard secondaire -->
-    <section class="dashboard-grid">
-        <div class="panel">
-            <div class="panel-header">
-                <div>
-                    <h3 class="panel-title">Demandes prioritaires</h3>
-                    <p class="panel-subtitle">Les dossiers qui nécessitent votre attention.</p>
-                </div>
+        </button>
+        <button type="button" class="kpi total" data-kpi="all">
+            <div class="kpi-top">
+                <span class="kpi-label">Toutes les demandes</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-file"></use></svg></div>
             </div>
-            <div class="panel-body">
-                <div id="priorityList" class="alert-list" role="list"></div>
+            <div class="kpi-value" id="statTotal">0</div>
+            <div class="kpi-note">Actives et archivées</div>
+        </button>
+        <button type="button" class="kpi archived" data-kpi="archived">
+            <div class="kpi-top">
+                <span class="kpi-label">Archivées</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-archive"></use></svg></div>
             </div>
-        </div>
-        <div class="panel">
-            <div class="panel-header">
-                <div>
-                    <h3 class="panel-title">Informations</h3>
-                    <p class="panel-subtitle">État de l'application</p>
-                </div>
-            </div>
-            <div class="panel-body">
-                <div class="settings-row">
-                    <span>Stockage</span>
-                    <strong id="storageStatus">Local (Dexie)</strong>
-                </div>
-                <div class="settings-row">
-                    <span>Demandes</span>
-                    <strong id="storageCount">0</strong>
-                </div>
-                <div class="settings-row">
-                    <span>Base</span>
-                    <strong>IndexedDB + Dexie</strong>
-                </div>
-                <div class="settings-row">
-                    <span>Dernière sauvegarde</span>
-                    <strong id="lastBackup">Jamais</strong>
-                </div>
-            </div>
-        </div>
+            <div class="kpi-value" id="statArchived">0</div>
+            <div class="kpi-note">Dossiers classés</div>
+        </button>
     </section>
 
     <!-- Liste des demandes -->
     <section class="panel">
-        <div class="tabs" role="tablist">
-            <button class="tab active" data-view="active" role="tab" aria-selected="true">Demandes actives</button>
-            <button class="tab" data-view="archived" role="tab" aria-selected="false">Archives</button>
-            <button class="tab" data-view="all" role="tab" aria-selected="false">Toutes</button>
-        </div>
-
         <div class="toolbar">
             <div class="search">
                 <span class="search-icon" aria-hidden="true"><svg class="icon"><use href="#i-search"></use></svg></span>
@@ -276,6 +330,11 @@
                     <div class="field">
                         <label for="dateDemande">Date de la demande</label>
                         <input id="dateDemande" name="dateDemande" type="date">
+                    </div>
+                    <div class="field">
+                        <label for="dateEvenement">Date de la cérémonie</label>
+                        <input id="dateEvenement" name="dateEvenement" type="date">
+                        <div class="field-help">Messe, obsèques, mariage, baptême… utilisée pour les annonces du jour.</div>
                     </div>
                     <div class="field">
                         <label for="status">Statut</label>
@@ -514,6 +573,84 @@
     </section>
 </div>
 
+<!-- ============================================================
+     ANNONCES
+============================================================ -->
+<div class="view-page" data-page="announcements" hidden>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Annonces</h2>
+            <p class="page-description">Annonces et bulletin paroissial.</p>
+        </div>
+    </div>
+
+    <section class="panel">
+        <div class="panel-body">
+            <div class="empty">Aucune annonce pour l'instant. Ce module arrivera bientôt.</div>
+        </div>
+    </section>
+
+</div>
+
+<!-- ============================================================
+     PARAMÈTRES
+============================================================ -->
+<div class="view-page" data-page="settings" hidden>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Paramètres</h2>
+            <p class="page-description">Personnalisez l'application et gérez vos données.</p>
+        </div>
+    </div>
+
+    <section class="panel">
+        <section class="settings-section">
+            <h3 class="settings-title">Paroisse</h3>
+            <p class="settings-description">Ce nom apparaît dans la barre latérale.</p>
+            <div class="field">
+                <label for="parishName">Nom</label>
+                <input id="parishName" placeholder="Secrétariat paroissial de Carmaux-Valence">
+            </div>
+        </section>
+        <section class="settings-section">
+            <h3 class="settings-title">Apparence</h3>
+            <p class="settings-description">Le thème est mémorisé sur cet appareil.</p>
+            <div class="settings-actions">
+                <button class="btn" id="settingsThemeBtn">Basculer clair / sombre</button>
+            </div>
+        </section>
+        <section class="settings-section">
+            <h3 class="settings-title">Données</h3>
+            <p class="settings-description">
+                Faites régulièrement une sauvegarde JSON.
+                Le stockage du navigateur n'est pas un système de sauvegarde sécurisé.
+            </p>
+            <div class="settings-actions">
+                <button class="btn" id="settingsExportJson"><svg class="icon"><use href="#i-download"></use></svg> Export JSON</button>
+                <button class="btn" id="settingsExportCsv"><svg class="icon"><use href="#i-download"></use></svg> Export CSV</button>
+                <button class="btn" id="importBtn"><svg class="icon"><use href="#i-upload"></use></svg> Importer</button>
+                <button class="btn btn-danger" id="clearDataBtn"><svg class="icon"><use href="#i-trash"></use></svg> Effacer toutes les données</button>
+            </div>
+        </section>
+        <section class="settings-section">
+            <h3 class="settings-title">Importation</h3>
+            <p class="settings-description">
+                Fusionner ou remplacer complètement la base actuelle.
+            </p>
+            <div class="settings-actions">
+                <button class="btn" id="mergeImportBtn">Fusionner un fichier</button>
+                <button class="btn" id="replaceImportBtn">Remplacer par un fichier</button>
+            </div>
+        </section>
+        <div class="panel-footer">
+            <button class="btn btn-primary" id="saveSettingsBtn"><svg class="icon"><use href="#i-check"></use></svg> Enregistrer</button>
+        </div>
+    </section>
+
+</div>
+
 </div>
 </main>
 
@@ -525,60 +662,6 @@
 </div>
 </div>
 
-<!-- MODALE PARAMÈTRES -->
-<div class="modal-backdrop" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
-    <div class="modal">
-        <div class="modal-header">
-            <h2 class="modal-title" id="settingsTitle">Paramètres</h2>
-            <button class="icon-btn" data-close-modal="settingsModal" aria-label="Fermer"><svg class="icon"><use href="#i-x"></use></svg></button>
-        </div>
-        <div class="modal-body">
-            <section class="settings-section">
-                <h3 class="settings-title">Paroisse</h3>
-                <p class="settings-description">Ce nom apparaît dans la barre latérale.</p>
-                <div class="field">
-                    <label for="parishName">Nom</label>
-                    <input id="parishName" placeholder="Secrétariat paroissial de Carmaux-Valence">
-                </div>
-            </section>
-            <section class="settings-section">
-                <h3 class="settings-title">Apparence</h3>
-                <p class="settings-description">Le thème est mémorisé sur cet appareil.</p>
-                <div class="settings-actions">
-                    <button class="btn" id="settingsThemeBtn">Basculer clair / sombre</button>
-                </div>
-            </section>
-            <section class="settings-section">
-                <h3 class="settings-title">Données</h3>
-                <p class="settings-description">
-                    Faites régulièrement une sauvegarde JSON.
-                    Le stockage du navigateur n'est pas un système de sauvegarde sécurisé.
-                </p>
-                <div class="settings-actions">
-                    <button class="btn" id="settingsExportJson"><svg class="icon"><use href="#i-download"></use></svg> Export JSON</button>
-                    <button class="btn" id="settingsExportCsv"><svg class="icon"><use href="#i-download"></use></svg> Export CSV</button>
-                    <button class="btn" id="importBtn"><svg class="icon"><use href="#i-upload"></use></svg> Importer</button>
-                    <button class="btn btn-danger" id="clearDataBtn"><svg class="icon"><use href="#i-trash"></use></svg> Effacer toutes les données</button>
-                </div>
-            </section>
-            <section class="settings-section">
-                <h3 class="settings-title">Importation</h3>
-                <p class="settings-description">
-                    Fusionner ou remplacer complètement la base actuelle.
-                </p>
-                <div class="settings-actions">
-                    <button class="btn" id="mergeImportBtn">Fusionner un fichier</button>
-                    <button class="btn" id="replaceImportBtn">Remplacer par un fichier</button>
-                </div>
-            </section>
-        </div>
-        <div class="modal-footer">
-            <button class="btn" data-close-modal="settingsModal">Fermer</button>
-            <button class="btn btn-primary" id="saveSettingsBtn">Enregistrer</button>
-        </div>
-    </div>
-</div>
-
 <input type="file" id="importFile" accept=".json,application/json" hidden>
 <input type="file" id="importPeopleCsvFile" accept=".csv,text/csv" hidden>
 <div id="toastContainer" class="toast-container" aria-live="polite"></div>
@@ -588,8 +671,9 @@
 <script src="js/icons.js"></script>
 <script src="js/csv.js"></script>
 <script src="js/state.js"></script>
-<script src="js/dashboard.js"></script>
+<script src="js/requests.js"></script>
 <script src="js/people.js"></script>
+<script src="js/overview.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/main.js"></script>
 </body>

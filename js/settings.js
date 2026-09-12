@@ -12,8 +12,6 @@ async function loadSettings() {
     }
     $("#brandTitle").textContent = state.settings.parishName;
     $("#parishName").value = state.settings.parishName;
-    $("#lastBackup").textContent = state.settings.lastBackup
-        ? formatDateTime(state.settings.lastBackup) : "Jamais";
     applyTheme(state.settings.theme || "light");
 }
 
@@ -23,10 +21,9 @@ async function saveSetting(key, value) {
 }
 
 async function saveSettings() {
-    const name = $("#parishName").value.trim() || "Secrétariat paroissial";
+    const name = $("#parishName").value.trim() || "Secrétariat paroissial de Carmaux-Valence";
     await saveSetting("parishName", name);
     $("#brandTitle").textContent = name;
-    closeModal("settingsModal");
     toast("Paramètres enregistrés.", "success");
 }
 
@@ -44,14 +41,13 @@ async function exportJSON() {
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
     downloadBlob(blob, `paroisse-sauvegarde-${todayISO()}.json`);
     await saveSetting("lastBackup", nowISO());
-    $("#lastBackup").textContent = formatDateTime(state.settings.lastBackup);
     toast("Sauvegarde JSON créée.", "success");
 }
 
 function exportCSV() {
-    const headers = ["Nom","Contact","Type","Date demande","Statut","Priorité","Échéance","Moyen contact","Description","Notes","Archivée","Créée le","Modifiée le"];
+    const headers = ["Nom","Contact","Type","Date demande","Date de la cérémonie","Statut","Priorité","Échéance","Moyen contact","Description","Notes","Archivée","Créée le","Modifiée le"];
     const rows = state.requests.map(r => [
-        r.name, r.contact, r.type, r.dateDemande, r.status, r.priority,
+        r.name, r.contact, r.type, r.dateDemande, r.dateEvenement, r.status, r.priority,
         r.deadline, r.contactMethod, r.description, r.notes,
         r.archived ? "Oui" : "Non", r.createdAt, r.updatedAt
     ]);
@@ -90,8 +86,9 @@ async function importFile(file) {
             added++;
         }
         await loadRequestsData();
-        renderDashboard();
+        renderRequestsSummary();
         renderRequests();
+        renderOverview();
         toast(`${added} demande(s) importée(s).`, "success");
     } catch (err) {
         console.error(err);
@@ -107,8 +104,9 @@ async function clearDatabase() {
     await db.requests.clear();
     await db.history.clear();
     await loadRequestsData();
-    renderDashboard();
+    renderRequestsSummary();
     renderRequests();
+    renderOverview();
     toast("Toutes les demandes ont été supprimées.", "success");
 }
 
@@ -116,7 +114,6 @@ async function clearDatabase() {
    ÉVÉNEMENTS
 ============================================================ */
 function initSettingsEvents() {
-    $("#settingsBtn").addEventListener("click", () => openModal("settingsModal"));
     $("#exportJsonBtn").addEventListener("click", exportJSON);
     $("#settingsExportJson").addEventListener("click", exportJSON);
     $("#settingsExportCsv").addEventListener("click", exportCSV);

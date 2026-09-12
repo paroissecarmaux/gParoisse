@@ -167,6 +167,7 @@ async function savePerson(e) {
         await db.people.put(person);
         await loadPeopleData();
         renderPeopleList();
+        renderOverview();
         toast(existing ? "Personne modifiée." : "Personne ajoutée.", "success");
         showPersonDetail(person.id);
     } catch (err) {
@@ -267,6 +268,7 @@ async function deletePerson(id) {
         await db.people.delete(id);
         await loadPeopleData();
         renderPeopleList();
+        renderOverview();
         toast("Personne supprimée.", "success");
         showPage("people");
     } catch (err) {
@@ -348,6 +350,7 @@ async function importPeopleCSV(file) {
 
         await loadPeopleData();
         renderPeopleList();
+        renderOverview();
         toast(`${imported} personne(s) importée(s)${skipped ? ` · ${skipped} ligne(s) ignorée(s)` : ""}.`, "success");
     } catch (err) {
         console.error(err);

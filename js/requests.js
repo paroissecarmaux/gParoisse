@@ -1,7 +1,7 @@
 "use strict";
 
 /* ============================================================
-   MODULE DEMANDES / TABLEAU DE BORD
+   MODULE DEMANDES
 ============================================================ */
 const REQUEST_TYPES = [
     "Certificat de baptême", "Certificat de mariage", "Certificat de décès",
@@ -25,6 +25,7 @@ function createDefaultRequest() {
         contact: "",
         type: REQUEST_TYPES[0],
         dateDemande: todayISO(),
+        dateEvenement: "",
         status: "En attente",
         priority: "Normale",
         deadline: "",
@@ -46,6 +47,7 @@ function normalizeRequest(raw) {
         contact: String(raw.contact || raw.telephone || raw.email || "").trim(),
         type: REQUEST_TYPES.includes(raw.type) ? raw.type : "Autre",
         dateDemande: raw.dateDemande || raw.date || todayISO(),
+        dateEvenement: raw.dateEvenement || raw.dateCeremonie || "",
         status: STATUS.includes(raw.status) ? raw.status
             : (STATUS.includes(raw.statut) ? raw.statut : "En attente"),
         priority: PRIORITIES.includes(raw.priority) ? raw.priority
@@ -110,6 +112,7 @@ function filteredRequests() {
         if (state.view === "archived" && !r.archived) return false;
         if (status && r.status !== status) return false;
         if (type && r.type !== type) return false;
+        if (state.quickFilter === "alert" && !(r.priority === "Urgente" || isOverdue(r))) return false;
         if (query) {
             const hay = normalize([r.name, r.contact, r.type, r.status, r.description, r.notes].join(" "));
             if (!hay.includes(query)) return false;
@@ -197,38 +200,36 @@ function renderRequestCard(r) {
     `;
 }
 
-function renderDashboard() {
+function renderRequestsSummary() {
     const active = state.requests.filter(r => !r.archived);
     $("#statPending").textContent = active.filter(r => r.status === "En attente").length;
     $("#statProgress").textContent = active.filter(r => r.status === "En cours").length;
     $("#statDone").textContent = active.filter(r => r.status === "Terminé").length;
     $("#statAlerts").textContent = active.filter(r => r.priority === "Urgente" || isOverdue(r)).length;
-    $("#storageCount").textContent = state.requests.length;
+    $("#statTotal").textContent = state.requests.length;
+    $("#statArchived").textContent = state.requests.filter(r => r.archived).length;
+}
 
-    const priority = active
-        .filter(r => r.priority === "Urgente" || isOverdue(r))
-        .sort((a, b) => {
-            if (isOverdue(a) !== isOverdue(b)) return isOverdue(a) ? -1 : 1;
-            return String(b.updatedAt).localeCompare(String(a.updatedAt));
-        })
-        .slice(0, 6);
+function filterRequestsByKpi(kpi) {
+    $("#searchInput").value = "";
+    $("#typeFilter").value = "";
+    $("#statusFilter").value = "";
+    state.quickFilter = null;
 
-    if (!priority.length) {
-        $("#priorityList").innerHTML = `<div class="empty">Rien de particulier à signaler.</div>`;
-        return;
+    if (kpi === "all") {
+        state.view = "all";
+    } else if (kpi === "archived") {
+        state.view = "archived";
+    } else if (kpi === "alert") {
+        state.view = "active";
+        state.quickFilter = "alert";
+    } else {
+        state.view = "active";
+        $("#statusFilter").value = kpi;
     }
 
-    $("#priorityList").innerHTML = priority.map(r => `
-        <div class="alert-item" data-priority-id="${escapeHTML(r.id)}" role="listitem">
-            <div class="alert-marker"></div>
-            <div class="alert-main">
-                <div class="alert-name">${escapeHTML(r.name)}</div>
-                <div class="alert-detail">
-                    ${isOverdue(r) ? "Échéance dépassée" : "Demande urgente"} · ${escapeHTML(r.type)}
-                </div>
-            </div>
-        </div>
-    `).join("");
+    renderRequests();
+    $("#requestList").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 /* ============================================================
@@ -240,6 +241,7 @@ function fillRequestForm(r) {
     $("#contact").value = r.contact || "";
     $("#type").value = r.type || REQUEST_TYPES[0];
     $("#dateDemande").value = r.dateDemande || todayISO();
+    $("#dateEvenement").value = r.dateEvenement || "";
     $("#status").value = r.status || "En attente";
     $("#priority").value = r.priority || "Normale";
     $("#deadline").value = r.deadline || "";
@@ -282,12 +284,15 @@ async function saveRequest(e) {
     const existing = state.requests.find(r => r.id === id);
     const now = nowISO();
 
+    const dateEvenement = $("#dateEvenement").value;
+
     const request = existing ? {
         ...existing,
         name,
         contact: $("#contact").value.trim(),
         type: $("#type").value,
         dateDemande,
+        dateEvenement,
         status: $("#status").value,
         priority: $("#priority").value,
         deadline,
@@ -302,6 +307,7 @@ async function saveRequest(e) {
         contact: $("#contact").value.trim(),
         type: $("#type").value,
         dateDemande,
+        dateEvenement,
         status: $("#status").value,
         priority: $("#priority").value,
         deadline,
@@ -320,8 +326,9 @@ async function saveRequest(e) {
         await addHistory(request.id, existing ? "update" : "create",
             existing ? "Demande modifiée" : "Demande créée");
         await loadRequestsData();
-        renderDashboard();
+        renderRequestsSummary();
         renderRequests();
+        renderOverview();
         toast(existing ? "Demande modifiée." : "Demande créée.", "success");
         showRequestDetail(request.id);
     } catch (err) {
@@ -362,6 +369,7 @@ function showRequestDetail(id) {
             <h4 class="fiche-section-title">Suivi</h4>
             <dl class="fiche-grid">
                 ${ficheField("Date de la demande", formatDate(r.dateDemande))}
+                ${ficheField("Date de la cérémonie", formatDate(r.dateEvenement))}
                 ${ficheField("Échéance", r.deadline ? `<span class="${dl.overdue ? "deadline overdue" : "deadline"}">${dl.text}</span>` : "")}
             </dl>
         </div>
@@ -423,10 +431,11 @@ async function toggleArchive(id) {
     await db.requests.put(r);
     await addHistory(id, archive ? "archive" : "restore", archive ? "Demande archivée" : "Demande restaurée");
     await loadRequestsData();
-    renderDashboard();
+    renderRequestsSummary();
     renderRequests();
+    renderOverview();
     toast(archive ? "Demande archivée." : "Demande restaurée.", "success");
-    showPage("dashboard");
+    showPage("requests");
 }
 
 async function markComplete(id) {
@@ -439,8 +448,9 @@ async function markComplete(id) {
     await db.requests.put(r);
     await addHistory(id, "complete", "Marquée comme terminée");
     await loadRequestsData();
-    renderDashboard();
+    renderRequestsSummary();
     renderRequests();
+    renderOverview();
     toast("Demande terminée.", "success");
 }
 
@@ -453,10 +463,11 @@ async function deleteRequest(id) {
         await db.requests.delete(id);
         await addHistory(id, "delete", "Demande supprimée définitivement");
         await loadRequestsData();
-        renderDashboard();
+        renderRequestsSummary();
         renderRequests();
+        renderOverview();
         toast("Demande supprimée.", "success");
-        showPage("dashboard");
+        showPage("requests");
     } catch (err) {
         console.error(err);
         toast("Impossible de supprimer la demande.", "error");
@@ -466,7 +477,7 @@ async function deleteRequest(id) {
 /* ============================================================
    ÉVÉNEMENTS
 ============================================================ */
-function initDashboardEvents() {
+function initRequestsEvents() {
     $("#requestList").addEventListener("click", async e => {
         const btn = e.target.closest("[data-action]");
         const card = e.target.closest("[data-request-id]");
@@ -484,9 +495,9 @@ function initDashboardEvents() {
         }
     });
 
-    $("#priorityList").addEventListener("click", e => {
-        const item = e.target.closest("[data-priority-id]");
-        if (item) showRequestDetail(item.dataset.priorityId);
+    $("#requestKpis").addEventListener("click", e => {
+        const btn = e.target.closest("[data-kpi]");
+        if (btn) filterRequestsByKpi(btn.dataset.kpi);
     });
 
     $("#requestForm").addEventListener("submit", saveRequest);
@@ -499,22 +510,9 @@ function initDashboardEvents() {
     $("#requestDetailArchiveBtn").addEventListener("click", () => state.selectedId && toggleArchive(state.selectedId));
     $("#requestDetailDeleteBtn").addEventListener("click", () => state.selectedId && deleteRequest(state.selectedId));
 
-    const debouncedRender = debounce(renderRequests, 200);
+    const debouncedRender = debounce(() => { state.quickFilter = null; renderRequests(); }, 200);
     $("#searchInput").addEventListener("input", debouncedRender);
-    $("#statusFilter").addEventListener("change", renderRequests);
-    $("#typeFilter").addEventListener("change", renderRequests);
+    $("#statusFilter").addEventListener("change", () => { state.quickFilter = null; renderRequests(); });
+    $("#typeFilter").addEventListener("change", () => { state.quickFilter = null; renderRequests(); });
     $("#sortFilter").addEventListener("change", renderRequests);
-
-    $$(".tab").forEach(tab => {
-        tab.addEventListener("click", () => {
-            $$(".tab").forEach(t => {
-                t.classList.remove("active");
-                t.setAttribute("aria-selected", "false");
-            });
-            tab.classList.add("active");
-            tab.setAttribute("aria-selected", "true");
-            state.view = tab.dataset.view;
-            renderRequests();
-        });
-    });
 }

@@ -7,14 +7,14 @@ const state = {
     requests: [],
     history: [],
     people: [],
-    page: "dashboard",
+    page: "overview",
     view: "active",
+    quickFilter: null,
     selectedId: null,
     selectedPersonId: null,
     requestFormMode: "new",
     personFormMode: "new",
     importMode: "merge",
-    lastFocused: null,
     settings: {
         parishName: "Secrétariat paroissial de Carmaux-Valence",
         lastBackup: null,
@@ -29,12 +29,15 @@ const state = {
    qu'à déclarer ses pages ici pour s'intégrer à la navigation.
 ============================================================ */
 const PAGE_SECTION = {
-    "dashboard": "dashboard",
-    "request-detail": "dashboard",
-    "request-form": "dashboard",
+    "overview": "overview",
+    "requests": "requests",
+    "request-detail": "requests",
+    "request-form": "requests",
     "people": "people",
     "person-detail": "people",
-    "person-form": "people"
+    "person-form": "people",
+    "announcements": "announcements",
+    "settings": "settings"
 };
 
 function showPage(page) {
@@ -54,9 +57,9 @@ function showPage(page) {
 
 function pageBackTarget(page) {
     switch (page) {
-        case "request-detail": return "dashboard";
+        case "request-detail": return "requests";
         case "person-detail": return "people";
-        case "request-form": return state.requestFormMode === "edit" ? "request-detail" : "dashboard";
+        case "request-form": return state.requestFormMode === "edit" ? "request-detail" : "requests";
         case "person-form": return state.personFormMode === "edit" ? "person-detail" : "people";
         default: return null;
     }
@@ -92,42 +95,4 @@ async function toggleTheme() {
     const next = state.settings.theme === "dark" ? "light" : "dark";
     applyTheme(next);
     await saveSetting("theme", next);
-}
-
-/* ============================================================
-   MODALES (réservées aux Paramètres)
-============================================================ */
-function getFocusable(container) {
-    return Array.from(container.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    )).filter(el => !el.disabled && el.offsetParent !== null);
-}
-
-function openModal(id) {
-    const backdrop = $("#" + id);
-    state.lastFocused = document.activeElement;
-    backdrop.classList.add("open");
-    backdrop.removeAttribute("hidden");
-    document.body.style.overflow = "hidden";
-    setTimeout(() => {
-        const focusables = getFocusable(backdrop);
-        if (focusables.length) focusables[0].focus();
-    }, 40);
-}
-
-function closeModal(id) {
-    const backdrop = $("#" + id);
-    backdrop.classList.remove("open");
-    backdrop.setAttribute("hidden", "");
-    if (!$$(".modal-backdrop.open").length) document.body.style.overflow = "";
-    if (state.lastFocused?.focus) state.lastFocused.focus();
-}
-
-function closeAllModals() {
-    $$(".modal-backdrop.open").forEach(m => {
-        m.classList.remove("open");
-        m.setAttribute("hidden", "");
-    });
-    document.body.style.overflow = "";
-    if (state.lastFocused?.focus) state.lastFocused.focus();
 }

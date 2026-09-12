@@ -1,7 +1,7 @@
 "use strict";
 
 /* ============================================================
-   NAVIGATION GLOBALE (sidebar, modale Paramètres)
+   NAVIGATION GLOBALE (sidebar)
 ============================================================ */
 function initGlobalEvents() {
     $$(".nav-item").forEach(btn => btn.addEventListener("click", () => showPage(btn.dataset.page)));
@@ -11,48 +11,22 @@ function initGlobalEvents() {
     });
     $("#sidebarBackdrop").addEventListener("click", closeSidebar);
 
-    $$("[data-close-modal]").forEach(btn => {
-        btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
-    });
-
-    $$(".modal-backdrop").forEach(b => {
-        b.addEventListener("mousedown", e => { if (e.target === b) closeModal(b.id); });
-    });
-
     document.addEventListener("keydown", e => {
         const tag = document.activeElement?.tagName;
         const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 
-        if (e.key === "Escape") {
-            if ($(".modal-backdrop.open")) closeAllModals();
-            else goBack();
-            return;
-        }
+        if (e.key === "Escape") { goBack(); return; }
 
-        if (e.key === "Tab") {
-            const open = $(".modal-backdrop.open");
-            if (open) {
-                const f = getFocusable(open);
-                if (!f.length) return;
-                if (e.shiftKey && document.activeElement === f[0]) {
-                    e.preventDefault(); f[f.length - 1].focus();
-                } else if (!e.shiftKey && document.activeElement === f[f.length - 1]) {
-                    e.preventDefault(); f[0].focus();
-                }
-            }
-        }
+        const section = PAGE_SECTION[state.page];
 
         if (e.key === "/" && !typing) {
-            const section = PAGE_SECTION[state.page];
-            if (section === "dashboard") { e.preventDefault(); $("#searchInput").focus(); }
+            if (section === "requests") { e.preventDefault(); $("#searchInput").focus(); }
             else if (section === "people") { e.preventDefault(); $("#peopleSearchInput").focus(); }
         }
 
         if (e.key.toLowerCase() === "n" && !typing && !e.ctrlKey && !e.metaKey) {
-            e.preventDefault();
-            const section = PAGE_SECTION[state.page];
-            if (section === "people") showPersonForm(null);
-            else showRequestForm(null);
+            if (section === "people") { e.preventDefault(); showPersonForm(null); }
+            else if (section === "requests") { e.preventDefault(); showRequestForm(null); }
         }
     });
 }
@@ -61,8 +35,9 @@ function initGlobalEvents() {
    INITIALISATION
 ============================================================ */
 async function init() {
-    initDashboardEvents();
+    initRequestsEvents();
     initPeopleEvents();
+    initOverviewEvents();
     initSettingsEvents();
     initGlobalEvents();
 
@@ -73,14 +48,13 @@ async function init() {
         await loadSettings();
         await loadRequestsData();
         await loadPeopleData();
-        renderDashboard();
+        renderRequestsSummary();
         renderRequests();
         renderPeopleList();
-        $("#storageStatus").textContent = "✓ Dexie prêt";
+        renderOverview();
         toast("Secrétariat prêt.", "success");
     } catch (err) {
         console.error(err);
-        $("#storageStatus").textContent = "Erreur";
         toast("Impossible d'ouvrir la base : " + err.message, "error");
     }
 }

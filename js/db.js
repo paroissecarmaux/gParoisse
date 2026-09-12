@@ -20,3 +20,13 @@ db.version(6).stores({
     settings: "key",
     people: "id, nom, prenom, updatedAt"
 });
+
+// v7 : ajout de l'agenda paroissial (horaires récurrents et annonces
+// ponctuelles), qui alimente le module Agenda aux côtés des demandes.
+db.version(7).stores({
+    requests: "id, status, type, priority, dateDemande, deadline, updatedAt, archived, name",
+    history: "id, requestId, createdAt",
+    settings: "key",
+    people: "id, nom, prenom, updatedAt",
+    schedule: "id, kind, dayOfWeek, date, updatedAt"
+});
