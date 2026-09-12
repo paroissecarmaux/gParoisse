@@ -8,10 +8,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Secrétariat paroissial de Carmaux-Valence</title>
 
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon.svg">
 <link rel="stylesheet" href="css/style.css">
 
-<!-- Dexie.js -->
-<script src="https://unpkg.com/dexie@4/dist/dexie.min.js"></script>
+<!-- Dexie.js (vendorisé en local : l'application doit fonctionner hors ligne,
+     y compris ouverte directement depuis le disque en file://) -->
+<script src="js/vendor/dexie.min.js"></script>
 </head>
 
 <body>
@@ -51,6 +55,8 @@
 <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20"/><line x1="10" y1="18" x2="14" y2="18"/></symbol>
 <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14"/><polyline points="3,6 12,13 21,6"/></symbol>
 <symbol id="i-church" viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="6"/><line x1="10" y1="4" x2="14" y2="4"/><polyline points="6,11 12,6 18,11"/><line x1="12" y1="6" x2="12" y2="10"/><rect x="6" y="11" width="12" height="10"/><polyline points="10,21 10,15 14,15 14,21"/></symbol>
+<symbol id="i-badge" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9.3" cy="10.3" r="2.1"/><line x1="6.3" y1="15.8" x2="12.3" y2="15.8"/><line x1="13.8" y1="9" x2="17.7" y2="9"/><line x1="13.8" y1="12" x2="17.7" y2="12"/></symbol>
+<symbol id="i-candle" viewBox="0 0 24 24"><rect x="9" y="10" width="6" height="11" rx="1"/><line x1="12" y1="10" x2="12" y2="6.5"/><polygon points="12,3 14.2,7.5 9.8,7.5"/></symbol>
 </defs>
 </svg>
 
@@ -82,6 +88,12 @@
         </button>
         <button class="nav-item" data-page="clochers" type="button" aria-selected="false">
             <svg class="icon"><use href="#i-church"></use></svg> Clochers
+        </button>
+        <button class="nav-item" data-page="personnel" type="button" aria-selected="false">
+            <svg class="icon"><use href="#i-badge"></use></svg> Personnel
+        </button>
+        <button class="nav-item" data-page="intentions" type="button" aria-selected="false">
+            <svg class="icon"><use href="#i-candle"></use></svg> Intentions de messe
         </button>
     </nav>
     <div class="sidebar-footer">
@@ -156,7 +168,7 @@
                 <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-bell"></use></svg></div>
             </div>
             <div class="kpi-value" id="overviewAnnounceCount">0</div>
-            <div class="kpi-note">Obsèques, messes, anniversaires</div>
+            <div class="kpi-note">Obsèques, messes, anniversaires, intentions</div>
         </button>
     </section>
 
@@ -184,6 +196,10 @@
             <div class="announce-group">
                 <h4 class="announce-group-title">Anniversaires</h4>
                 <div id="announceAnniversaires" class="alert-list" role="list"></div>
+            </div>
+            <div class="announce-group">
+                <h4 class="announce-group-title">Intentions de messe</h4>
+                <div id="announceIntentions" class="alert-list" role="list"></div>
             </div>
         </div>
     </section>
@@ -1010,6 +1026,343 @@
 </div>
 
 <!-- ============================================================
+     PERSONNEL — LISTE
+============================================================ -->
+<div class="view-page" data-page="personnel" hidden>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Personnel</h2>
+            <p class="page-description">Bénévoles, salariés et clergé qui font vivre la paroisse.</p>
+        </div>
+        <div class="settings-actions">
+            <button type="button" class="btn" data-csv-export="personnel"><svg class="icon"><use href="#i-download"></use></svg> Export CSV</button>
+            <button type="button" class="btn" data-csv-import="personnel"><svg class="icon"><use href="#i-upload"></use></svg> Import CSV</button>
+            <button class="btn btn-primary" id="newPersonnelBtn"><svg class="icon"><use href="#i-plus"></use></svg> Nouveau membre</button>
+        </div>
+    </div>
+
+    <!-- KPI (cliquables : filtrent la liste ci-dessous) -->
+    <section class="kpis" id="personnelKpis" aria-label="Indicateurs">
+        <button type="button" class="kpi total" data-kpi="all">
+            <div class="kpi-top">
+                <span class="kpi-label">Tout le personnel</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-badge"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="personnelStatTotal">0</div>
+            <div class="kpi-note">Bénévoles, salariés et clergé</div>
+        </button>
+        <button type="button" class="kpi progress" data-kpi="Bénévole">
+            <div class="kpi-top">
+                <span class="kpi-label">Bénévoles</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-person"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="personnelStatBenevoles">0</div>
+            <div class="kpi-note">Engagement bénévole</div>
+        </button>
+        <button type="button" class="kpi normal" data-kpi="Salarié">
+            <div class="kpi-top">
+                <span class="kpi-label">Salariés</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-file"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="personnelStatSalaries">0</div>
+            <div class="kpi-note">Employés de la paroisse</div>
+        </button>
+        <button type="button" class="kpi alert" data-kpi="clerge">
+            <div class="kpi-top">
+                <span class="kpi-label">Clergé / religieux</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-cross"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="personnelStatClerge">0</div>
+            <div class="kpi-note">Prêtres, diacres, religieux(ses)</div>
+        </button>
+    </section>
+
+    <section class="panel">
+        <div class="result-count" id="personnelResultCount" aria-live="polite"></div>
+        <div id="personnelList" class="request-list" role="list"></div>
+    </section>
+
+</div>
+
+<!-- ============================================================
+     PERSONNEL — DÉTAIL
+============================================================ -->
+<div class="view-page" data-page="personnel-detail" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="personnelDetailBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+            <div>
+                <h2 class="page-title" id="personnelDetailTitle">Personnel</h2>
+            </div>
+        </div>
+        <div class="settings-actions">
+            <button class="btn" id="personnelEditBtn"><svg class="icon"><use href="#i-edit"></use></svg> Modifier</button>
+            <button class="btn" id="personnelDetailToggleBtn"><svg class="icon"><use href="#i-archive"></use></svg> Désactiver</button>
+            <button class="btn btn-danger" id="personnelDeleteBtn"><svg class="icon"><use href="#i-trash"></use></svg> Supprimer</button>
+        </div>
+    </div>
+    <section class="panel">
+        <div id="personnelDetailBody"></div>
+    </section>
+</div>
+
+<!-- ============================================================
+     PERSONNEL — FORMULAIRE
+============================================================ -->
+<div class="view-page" data-page="personnel-form" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="personnelFormBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+            <div>
+                <h2 class="page-title" id="personnelFormTitle">Nouveau membre du personnel</h2>
+            </div>
+        </div>
+    </div>
+    <section class="panel">
+        <form id="personnelForm">
+            <div class="panel-body">
+                <input type="hidden" id="personnelId">
+                <div class="form-grid">
+                    <div class="form-section-title first">Identité</div>
+                    <div class="field">
+                        <label for="personnelPrenom">Prénom *</label>
+                        <input id="personnelPrenom" required autocomplete="given-name">
+                    </div>
+                    <div class="field">
+                        <label for="personnelNom">Nom *</label>
+                        <input id="personnelNom" required autocomplete="family-name">
+                    </div>
+                    <div class="field">
+                        <label for="personnelTypeEngagement">Type d'engagement</label>
+                        <select id="personnelTypeEngagement"></select>
+                    </div>
+                    <div class="field">
+                        <label for="personnelEtat">Statut</label>
+                        <select id="personnelEtat"></select>
+                    </div>
+                    <div class="field full">
+                        <label for="personnelFonction">Fonction</label>
+                        <input id="personnelFonction" placeholder="Ex. Catéchiste, sacristain, comptable…">
+                    </div>
+
+                    <div class="form-section-title">Contact</div>
+                    <div class="field">
+                        <label for="personnelTelephone">Téléphone</label>
+                        <input id="personnelTelephone" autocomplete="tel">
+                    </div>
+                    <div class="field">
+                        <label for="personnelEmail">E-mail</label>
+                        <input id="personnelEmail" type="email" autocomplete="email">
+                    </div>
+                    <div class="field full">
+                        <label for="personnelAdresse">Adresse</label>
+                        <input id="personnelAdresse">
+                    </div>
+
+                    <div class="form-section-title">Engagement</div>
+                    <div class="field">
+                        <label for="personnelDateDebut">Début</label>
+                        <input id="personnelDateDebut" type="date">
+                    </div>
+                    <div class="field">
+                        <label for="personnelDateFin">Fin (le cas échéant)</label>
+                        <input id="personnelDateFin" type="date">
+                    </div>
+                    <div class="field full">
+                        <label class="checkbox-label" for="personnelActive">
+                            <input type="checkbox" id="personnelActive" checked>
+                            Fiche active
+                        </label>
+                    </div>
+
+                    <div class="form-section-title">Notes</div>
+                    <div class="field full">
+                        <label for="personnelNotes">Notes</label>
+                        <textarea id="personnelNotes" placeholder="Disponibilités, compétences, remarques…"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <button type="button" class="btn" id="personnelFormCancelBtn">Annuler</button>
+                <button type="submit" class="btn btn-primary"><svg class="icon"><use href="#i-check"></use></svg> Enregistrer</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+<!-- ============================================================
+     INTENTIONS DE MESSE — LISTE
+============================================================ -->
+<div class="view-page" data-page="intentions" hidden>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Intentions de messe</h2>
+            <p class="page-description">Défunts, anniversaires, neuvaines, actions de grâce…</p>
+        </div>
+        <div class="settings-actions">
+            <button type="button" class="btn" data-csv-export="intentions"><svg class="icon"><use href="#i-download"></use></svg> Export CSV</button>
+            <button type="button" class="btn" data-csv-import="intentions"><svg class="icon"><use href="#i-upload"></use></svg> Import CSV</button>
+            <button class="btn btn-primary" id="newIntentionBtn"><svg class="icon"><use href="#i-plus"></use></svg> Nouvelle intention</button>
+        </div>
+    </div>
+
+    <!-- KPI (cliquables : filtrent la liste ci-dessous) -->
+    <section class="kpis" id="intentionKpis" aria-label="Indicateurs">
+        <button type="button" class="kpi total" data-kpi="all">
+            <div class="kpi-top">
+                <span class="kpi-label">Toutes les intentions</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-candle"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="intentionStatTotal">0</div>
+            <div class="kpi-note">Messes uniques et neuvaines</div>
+        </button>
+        <button type="button" class="kpi pending" data-kpi="À célébrer">
+            <div class="kpi-top">
+                <span class="kpi-label">À célébrer</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-clock"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="intentionStatACelebrer">0</div>
+            <div class="kpi-note">Restant à célébrer</div>
+        </button>
+        <button type="button" class="kpi done" data-kpi="Célébrée">
+            <div class="kpi-top">
+                <span class="kpi-label">Célébrées</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-check-circle"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="intentionStatCelebree">0</div>
+            <div class="kpi-note">Déjà célébrées</div>
+        </button>
+        <button type="button" class="kpi progress" data-kpi="Neuvaine">
+            <div class="kpi-top">
+                <span class="kpi-label">Neuvaines</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-refresh"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="intentionStatNeuvaine">0</div>
+            <div class="kpi-note">9 messes consécutives</div>
+        </button>
+    </section>
+
+    <section class="panel">
+        <div class="result-count" id="intentionResultCount" aria-live="polite"></div>
+        <div id="intentionList" class="request-list" role="list"></div>
+    </section>
+
+</div>
+
+<!-- ============================================================
+     INTENTION — DÉTAIL
+============================================================ -->
+<div class="view-page" data-page="intention-detail" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="intentionDetailBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+            <div>
+                <h2 class="page-title" id="intentionDetailTitle">Intention</h2>
+            </div>
+        </div>
+        <div class="settings-actions">
+            <button class="btn" id="intentionEditBtn"><svg class="icon"><use href="#i-edit"></use></svg> Modifier</button>
+            <button class="btn" id="intentionDetailToggleBtn"><svg class="icon"><use href="#i-check"></use></svg> Marquer célébrée</button>
+            <button class="btn btn-danger" id="intentionDeleteBtn"><svg class="icon"><use href="#i-trash"></use></svg> Supprimer</button>
+        </div>
+    </div>
+    <section class="panel">
+        <div id="intentionDetailBody"></div>
+    </section>
+</div>
+
+<!-- ============================================================
+     INTENTION — FORMULAIRE
+============================================================ -->
+<div class="view-page" data-page="intention-form" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="intentionFormBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+            <div>
+                <h2 class="page-title" id="intentionFormTitle">Nouvelle intention de messe</h2>
+            </div>
+        </div>
+    </div>
+    <section class="panel">
+        <form id="intentionForm">
+            <div class="panel-body">
+                <input type="hidden" id="intentionId">
+                <div class="form-grid">
+                    <div class="form-section-title first">Intention</div>
+                    <div class="field">
+                        <label for="intentionType">Type</label>
+                        <select id="intentionType"></select>
+                    </div>
+                    <div class="field">
+                        <label for="intentionStatut">Statut</label>
+                        <select id="intentionStatut"></select>
+                    </div>
+                    <div class="field full">
+                        <label for="intentionIntitule">Intitulé *</label>
+                        <input id="intentionIntitule" required placeholder="Ex. Pour le repos de l'âme de Jean Dupont">
+                    </div>
+
+                    <div class="form-section-title">Demandeur</div>
+                    <div class="field full autocomplete-field">
+                        <label for="intentionDemandeur">Demandeur</label>
+                        <input id="intentionDemandeur" autocomplete="off" placeholder="Recherche dans les personnes">
+                        <input type="hidden" id="intentionPersonId">
+                        <div class="dropdown-menu" id="demandeurAutocompleteMenu" hidden></div>
+                    </div>
+                    <div class="field full">
+                        <label for="intentionContact">Contact</label>
+                        <input id="intentionContact" placeholder="Téléphone / e-mail">
+                    </div>
+
+                    <div class="form-section-title">Célébration</div>
+                    <div class="field">
+                        <label for="intentionDateDebut">Date de début</label>
+                        <input id="intentionDateDebut" type="date">
+                    </div>
+                    <div class="field">
+                        <label for="intentionNombreMesses">Nombre de messes</label>
+                        <input id="intentionNombreMesses" type="number" min="1" value="1">
+                        <div class="field-help">9 pour une neuvaine (jours consécutifs à partir de la date de début).</div>
+                    </div>
+                    <div class="field">
+                        <label for="intentionHeure">Heure</label>
+                        <input id="intentionHeure" type="time">
+                    </div>
+                    <div class="field">
+                        <label for="intentionOffrande">Offrande</label>
+                        <input id="intentionOffrande" placeholder="Ex. 20 €">
+                    </div>
+                    <div class="field full autocomplete-field">
+                        <label for="intentionLieu">Lieu</label>
+                        <input id="intentionLieu" autocomplete="off" placeholder="Recherche dans les clochers">
+                        <input type="hidden" id="intentionClocherId">
+                        <div class="dropdown-menu" id="intentionLieuAutocompleteMenu" hidden></div>
+                    </div>
+                    <div class="field full autocomplete-field">
+                        <label for="intentionCelebrant">Célébrant</label>
+                        <input id="intentionCelebrant" autocomplete="off" placeholder="Recherche dans le personnel">
+                        <input type="hidden" id="intentionPersonnelId">
+                        <div class="dropdown-menu" id="celebrantAutocompleteMenu" hidden></div>
+                    </div>
+
+                    <div class="form-section-title">Notes</div>
+                    <div class="field full">
+                        <label for="intentionNotes">Notes</label>
+                        <textarea id="intentionNotes" placeholder="Informations complémentaires…"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <button type="button" class="btn" id="intentionFormCancelBtn">Annuler</button>
+                <button type="submit" class="btn btn-primary"><svg class="icon"><use href="#i-check"></use></svg> Enregistrer</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+<!-- ============================================================
      AGENDA
 ============================================================ -->
 <div class="view-page" data-page="agenda" hidden>
@@ -1052,6 +1405,11 @@
             <h2 class="page-title">Paramètres</h2>
             <p class="page-description">Personnalisez l'application et gérez vos données.</p>
         </div>
+    </div>
+
+    <div class="local-notice">
+        <svg class="icon" aria-hidden="true"><use href="#i-alert-triangle"></use></svg>
+        <p>Toutes les données restent <strong>uniquement sur cet appareil</strong> (aucun serveur, aucune synchronisation). Pensez à exporter une <strong>sauvegarde JSON</strong> régulièrement : c'est le seul moyen de les récupérer en cas de problème.</p>
     </div>
 
     <section class="panel">
@@ -1138,6 +1496,7 @@
 <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
 <script src="js/db.js"></script>
+<script src="js/constants.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/icons.js"></script>
 <script src="js/csv.js"></script>
@@ -1146,6 +1505,8 @@
 <script src="js/people.js"></script>
 <script src="js/schedule.js"></script>
 <script src="js/clochers.js"></script>
+<script src="js/personnel.js"></script>
+<script src="js/intentions.js"></script>
 <script src="js/overview.js"></script>
 <script src="js/agenda.js"></script>
 <script src="js/settings.js"></script>

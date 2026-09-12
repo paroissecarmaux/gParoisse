@@ -9,22 +9,30 @@ const state = {
     people: [],
     schedule: [],
     clochers: [],
+    personnel: [],
+    intentions: [],
     page: "overview",
     view: "active",
     quickFilter: null,
     peopleQuickFilter: null,
     scheduleQuickFilter: null,
     clocherQuickFilter: null,
+    personnelQuickFilter: null,
+    intentionQuickFilter: null,
     peoplePage: 1,
     requestsPage: 1,
     selectedId: null,
     selectedPersonId: null,
     selectedScheduleId: null,
     selectedClocherId: null,
+    selectedPersonnelId: null,
+    selectedIntentionId: null,
     requestFormMode: "new",
     personFormMode: "new",
     scheduleFormMode: "new",
     clocherFormMode: "new",
+    personnelFormMode: "new",
+    intentionFormMode: "new",
     agendaView: "week",
     agendaDate: todayISO(),
     importMode: "merge",
@@ -56,6 +64,12 @@ const PAGE_SECTION = {
     "clochers": "clochers",
     "clocher-detail": "clochers",
     "clocher-form": "clochers",
+    "personnel": "personnel",
+    "personnel-detail": "personnel",
+    "personnel-form": "personnel",
+    "intentions": "intentions",
+    "intention-detail": "intentions",
+    "intention-form": "intentions",
     "agenda": "agenda",
     "settings": "settings"
 };
@@ -85,6 +99,10 @@ function pageBackTarget(page) {
         case "schedule-form": return state.scheduleFormMode === "edit" ? "schedule-detail" : "announcements";
         case "clocher-detail": return "clochers";
         case "clocher-form": return state.clocherFormMode === "edit" ? "clocher-detail" : "clochers";
+        case "personnel-detail": return "personnel";
+        case "personnel-form": return state.personnelFormMode === "edit" ? "personnel-detail" : "personnel";
+        case "intention-detail": return "intentions";
+        case "intention-form": return state.intentionFormMode === "edit" ? "intention-detail" : "intentions";
         default: return null;
     }
 }

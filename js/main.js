@@ -39,8 +39,23 @@ function initGlobalEvents() {
             else if (section === "requests") { e.preventDefault(); showRequestForm(null); }
             else if (section === "announcements") { e.preventDefault(); showScheduleForm(null); }
             else if (section === "clochers") { e.preventDefault(); showClocherForm(null); }
+            else if (section === "personnel") { e.preventDefault(); showPersonnelForm(null); }
+            else if (section === "intentions") { e.preventDefault(); showIntentionForm(null); }
         }
     });
+}
+
+/* ============================================================
+   SERVICE WORKER (PWA)
+   Purement additif : l'app fonctionne sans lui (toutes les données
+   vivent dans IndexedDB). Les navigateurs refusent les service
+   workers sur file:// — c'est le mode d'usage normal en local — on
+   ne tente donc l'enregistrement que lorsque l'app est servie en
+   http(s), et on avale silencieusement tout échec.
+============================================================ */
+function registerServiceWorker() {
+    if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
+    navigator.serviceWorker.register("sw.js").catch(() => { /* mode hors-ligne local : rien à faire */ });
 }
 
 /* ============================================================
@@ -51,6 +66,8 @@ async function init() {
     initPeopleEvents();
     initScheduleEvents();
     initClochersEvents();
+    initPersonnelEvents();
+    initIntentionsEvents();
     initOverviewEvents();
     initAgendaEvents();
     initSettingsEvents();
@@ -61,11 +78,15 @@ async function init() {
         renderTypeFilters();
         renderTypeFormOptions();
         renderScheduleCategoryOptions();
+        renderPersonnelFormOptions();
+        renderIntentionFormOptions();
         await loadSettings();
         await loadRequestsData();
         await loadPeopleData();
         await loadScheduleData();
         await loadClochersData();
+        await loadPersonnelData();
+        await loadIntentionsData();
         renderRequestsSummary();
         renderRequests();
         renderPeopleList();
@@ -74,6 +95,10 @@ async function init() {
         renderScheduleSummary();
         renderClochersList();
         renderClochersSummary();
+        renderPersonnelList();
+        renderPersonnelSummary();
+        renderIntentionsList();
+        renderIntentionsSummary();
         renderOverview();
         renderAgenda();
         toast("Secrétariat prêt.", "success");
@@ -84,3 +109,4 @@ async function init() {
 }
 
 init();
+registerServiceWorker();

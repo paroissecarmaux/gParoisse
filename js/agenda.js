@@ -2,9 +2,10 @@
 
 /* ============================================================
    MODULE AGENDA
-   Agrège deux sources en lecture seule : les demandes de
-   catégorie « événement » (date de cérémonie) et les annonces
-   paroissiales (récurrentes ou ponctuelles).
+   Agrège trois sources en lecture seule : les demandes de
+   catégorie « événement » (date de cérémonie), les annonces
+   paroissiales (récurrentes ou ponctuelles) et les intentions de
+   messe (une neuvaine occupe plusieurs jours consécutifs).
 ============================================================ */
 function agendaEventsForDate(iso) {
     const events = [];
@@ -31,6 +32,19 @@ function agendaEventsForDate(iso) {
             location: s.location || "",
             kind: "schedule",
             id: s.id
+        });
+    });
+
+    state.intentions.forEach(i => {
+        if (!intentionOccursOn(i, iso)) return;
+        const clocher = i.clocherId ? state.clochers.find(c => c.id === i.clocherId) : null;
+        events.push({
+            time: i.heure || "",
+            title: i.intitule || i.type,
+            subtitle: i.type,
+            location: clocher ? clocher.nom : "",
+            kind: "intention",
+            id: i.id
         });
     });
 
@@ -131,6 +145,7 @@ function initAgendaEvents() {
         const item = e.target.closest("[data-kind]");
         if (!item) return;
         if (item.dataset.kind === "request") showRequestDetail(item.dataset.id);
+        else if (item.dataset.kind === "intention") showIntentionDetail(item.dataset.id);
         else showScheduleDetail(item.dataset.id);
     };
     $("#agendaWeekView").addEventListener("click", handleEventClick);

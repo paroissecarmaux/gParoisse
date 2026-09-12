@@ -440,14 +440,8 @@ function showPersonDetail(id) {
    Impression navigateur (fenêtre dédiée) plutôt qu'une librairie
    PDF : aucune dépendance, fonctionne hors-ligne, « Enregistrer en
    PDF » est proposé nativement par la boîte de dialogue d'impression.
+   Référentiel CERTIFICATES : voir js/constants.js.
 ============================================================ */
-const CERTIFICATES = {
-    bapteme: { label: "Certificat de baptême", requires: "dateBapteme" },
-    communion: { label: "Certificat de communion", requires: "dateCommunion" },
-    confirmation: { label: "Certificat de confirmation", requires: "dateConfirmation" },
-    mariage: { label: "Certificat de mariage", requires: "dateMariage" }
-};
-
 function updatePersonDocsMenu(p) {
     $$("#personDocsMenu [data-cert]").forEach(btn => {
         const cert = CERTIFICATES[btn.dataset.cert];

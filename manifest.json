@@ -1,0 +1,15 @@
+{
+    "name": "Secrétariat paroissial",
+    "short_name": "Paroisse",
+    "description": "Gestion locale du secrétariat paroissial : demandes, personnes, agenda, annonces et clochers. Toutes les données restent sur cet appareil.",
+    "lang": "fr",
+    "start_url": "./index.html",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#f6f2ec",
+    "theme_color": "#7d3b42",
+    "icons": [
+        { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+        { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+    ]
+}

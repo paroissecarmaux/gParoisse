@@ -90,6 +90,25 @@ function renderHoraireItem(s) {
     `;
 }
 
+function intentionsForToday() {
+    const today = todayISO();
+    return state.intentions
+        .filter(i => intentionOccursOn(i, today))
+        .sort((a, b) => (a.heure || "").localeCompare(b.heure || ""));
+}
+
+function renderIntentionItem(i) {
+    return `
+        <div class="alert-item" data-intention-id="${escapeHTML(i.id)}" role="listitem">
+            <div class="alert-marker"></div>
+            <div class="alert-main">
+                <div class="alert-name">${escapeHTML(i.intitule || i.type)}</div>
+                <div class="alert-detail">${escapeHTML([i.heure, i.type].filter(Boolean).join(" · "))}</div>
+            </div>
+        </div>
+    `;
+}
+
 function renderOverview() {
     $("#overviewTodayLabel").textContent =
         new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
@@ -98,16 +117,18 @@ function renderOverview() {
     const messes = requestsForTodayByType("Demande de messe");
     const anniversaires = peopleWithBirthdayToday();
     const horaires = scheduleForToday();
+    const intentions = intentionsForToday();
 
     renderAnnounceList("#announceObseques", obseques, renderObsequesItem, "Aucune obsèque aujourd'hui.");
     renderAnnounceList("#announceMesses", messes, renderMesseItem, "Aucune messe programmée aujourd'hui.");
     renderAnnounceList("#announceHoraires", horaires, renderHoraireItem, "Aucun horaire paroissial aujourd'hui.");
     renderAnnounceList("#announceAnniversaires", anniversaires, renderAnniversaireItem, "Aucun anniversaire aujourd'hui.");
+    renderAnnounceList("#announceIntentions", intentions, renderIntentionItem, "Aucune intention de messe aujourd'hui.");
 
     $("#overviewPeopleCount").textContent = state.people.length;
     $("#overviewPendingCount").textContent = state.requests.filter(r => !r.archived && r.status === "En attente").length;
     $("#overviewAlertCount").textContent = state.requests.filter(r => !r.archived && (r.priority === "Urgente" || isOverdue(r))).length;
-    $("#overviewAnnounceCount").textContent = obseques.length + messes.length + horaires.length + anniversaires.length;
+    $("#overviewAnnounceCount").textContent = obseques.length + messes.length + horaires.length + anniversaires.length + intentions.length;
 }
 
 /* ============================================================
@@ -147,5 +168,9 @@ function initOverviewEvents() {
     $("#announceAnniversaires").addEventListener("click", e => {
         const item = e.target.closest("[data-person-id]");
         if (item) showPersonDetail(item.dataset.personId);
+    });
+    $("#announceIntentions").addEventListener("click", e => {
+        const item = e.target.closest("[data-intention-id]");
+        if (item) showIntentionDetail(item.dataset.intentionId);
     });
 }

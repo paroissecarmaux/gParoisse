@@ -7,10 +7,8 @@
      (ex. « Messe dominicale », tous les dimanches à 10h30)
    - ponctuelle : une seule date (ex. « Pèlerinage », le 15 mars)
    Ces annonces alimentent l'agenda aux côtés des demandes.
+   Catégories et noms de jours : voir js/constants.js.
 ============================================================ */
-const SCHEDULE_CATEGORIES = ["Messe", "Confession", "Adoration", "Réunion", "Autre"];
-const WEEKDAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
-
 async function loadScheduleData() {
     state.schedule = await db.schedule.orderBy("updatedAt").reverse().toArray();
 }

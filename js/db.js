@@ -5,15 +5,26 @@
    Schéma partagé par tous les modules. Une nouvelle version doit
    être ajoutée (jamais modifiée rétroactivement) à chaque évolution
    de la structure, pour préserver les données déjà enregistrées.
+
+   Chaque appel à .version(N).stores({...}) doit lister l'intégralité
+   des tables (pas seulement celles qui changent) : c'est ainsi que
+   Dexie fonctionne — la liste la plus récente décrit l'état courant,
+   les précédentes ne servent qu'à migrer les bases existantes.
+   La chaîne de caractères par table n'énumère que les champs
+   indexés (recherchables/triables) ; un enregistrement peut avoir
+   d'autres champs non listés ici (ex. toutes les colonnes du
+   formulaire Personne), stockés normalement mais non indexés.
 ============================================================ */
 const db = new Dexie("paroisse_secretariat");
 
+// v5 : version initiale (demandes + historique + paramètres).
 db.version(5).stores({
     requests: "id, status, type, priority, dateDemande, deadline, updatedAt, archived, name",
     history: "id, requestId, createdAt",
     settings: "key"
 });
 
+// v6 : ajout de l'annuaire des personnes.
 db.version(6).stores({
     requests: "id, status, type, priority, dateDemande, deadline, updatedAt, archived, name",
     history: "id, requestId, createdAt",
@@ -41,4 +52,18 @@ db.version(8).stores({
     people: "id, nom, prenom, updatedAt",
     schedule: "id, kind, dayOfWeek, date, updatedAt",
     clochers: "id, nom, commune, updatedAt"
+});
+
+// v9 : ajout du Personnel (bénévoles, salariés, clergé) et des
+// Intentions de messe, qui alimentent aussi l'agenda et se lient au
+// Personnel (célébrant), aux Personnes (demandeur) et aux Clochers (lieu).
+db.version(9).stores({
+    requests: "id, status, type, priority, dateDemande, deadline, updatedAt, archived, name",
+    history: "id, requestId, createdAt",
+    settings: "key",
+    people: "id, nom, prenom, updatedAt",
+    schedule: "id, kind, dayOfWeek, date, updatedAt",
+    clochers: "id, nom, commune, updatedAt",
+    personnel: "id, nom, prenom, typeEngagement, active, updatedAt",
+    intentions: "id, type, statut, dateDebut, updatedAt"
 });

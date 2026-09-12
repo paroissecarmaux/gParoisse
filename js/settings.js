@@ -31,7 +31,22 @@ async function saveSettings() {
    EXPORT / IMPORT (toutes les bases)
    Registre déclaratif : ajouter un futur module (nouvelle base
    Dexie) ne demande qu'une entrée ici plutôt que de dupliquer la
-   logique dans exportJSON/importFile/clearDatabase.
+   logique dans exportJSON/importFile/clearDatabase, et dans
+   exportModuleCSV/importModuleCSVFile pour le CSV base par base.
+
+   Champs de chaque entrée :
+   - table/stateKey  : accès à la table Dexie et au tableau en mémoire
+   - normalize       : (JSON) transforme un objet brut importé en
+                       enregistrement valide (id garanti, valeurs par
+                       défaut) — normalizeRequest() pour les demandes,
+                       une version minimale pour les autres modules
+   - isValid         : filtre les lignes/objets inexploitables
+   - createDefault   : gabarit utilisé pour compléter une ligne CSV
+                       qui ne renseigne pas toutes les colonnes
+   - csvFields       : colonnes CSV, dans l'ordre d'export ; `type`
+                       vaut "bool" (Oui/Non) ou "date" (tolère ISO,
+                       jj/mm/aaaa, ou un numéro de série Excel), sinon
+                       le texte est copié tel quel
 ============================================================ */
 const DATA_MODULES = [
     {
@@ -156,13 +171,65 @@ const DATA_MODULES = [
             { key: "notes", header: "Notes" },
             { key: "active", header: "Active", type: "bool" }
         ]
+    },
+    {
+        key: "personnel",
+        label: "membre(s) du personnel",
+        table: () => db.personnel,
+        stateKey: "personnel",
+        normalize: p => ({ ...p, id: String(p.id || uid()) }),
+        isValid: p => Boolean(p && (p.prenom || p.nom)),
+        load: loadPersonnelData,
+        render: () => { renderPersonnelSummary(); renderPersonnelList(); },
+        createDefault: createDefaultPersonnel,
+        csvFields: [
+            { key: "id", header: "ID" },
+            { key: "prenom", header: "Prénom" },
+            { key: "nom", header: "Nom" },
+            { key: "typeEngagement", header: "Type d'engagement" },
+            { key: "etat", header: "Statut" },
+            { key: "fonction", header: "Fonction" },
+            { key: "telephone", header: "Téléphone" },
+            { key: "email", header: "E-mail" },
+            { key: "adresse", header: "Adresse" },
+            { key: "dateDebut", header: "Début", type: "date" },
+            { key: "dateFin", header: "Fin", type: "date" },
+            { key: "notes", header: "Notes" },
+            { key: "active", header: "Active", type: "bool" }
+        ]
+    },
+    {
+        key: "intentions",
+        label: "intention(s) de messe",
+        table: () => db.intentions,
+        stateKey: "intentions",
+        normalize: i => ({ ...i, id: String(i.id || uid()) }),
+        isValid: i => Boolean(i && i.intitule),
+        load: loadIntentionsData,
+        render: () => { renderIntentionsSummary(); renderIntentionsList(); },
+        createDefault: createDefaultIntention,
+        csvFields: [
+            { key: "id", header: "ID" },
+            { key: "type", header: "Type" },
+            { key: "intitule", header: "Intitulé" },
+            { key: "statut", header: "Statut" },
+            { key: "dateDebut", header: "Date de début", type: "date" },
+            { key: "nombreMesses", header: "Nombre de messes" },
+            { key: "heure", header: "Heure" },
+            { key: "offrande", header: "Offrande" },
+            { key: "personId", header: "ID demandeur" },
+            { key: "contact", header: "Contact" },
+            { key: "clocherId", header: "ID clocher" },
+            { key: "personnelId", header: "ID célébrant" },
+            { key: "notes", header: "Notes" }
+        ]
     }
 ];
 
 async function exportJSON() {
     const payload = {
         app: "Paroisse · Secrétariat",
-        version: 8,
+        version: 9,
         exportedAt: nowISO(),
         settings: state.settings
     };

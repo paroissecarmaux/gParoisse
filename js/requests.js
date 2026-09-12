@@ -2,38 +2,9 @@
 
 /* ============================================================
    MODULE DEMANDES
+   Vocabulaire (types, statuts, priorités, catégorisation) déplacé
+   dans js/constants.js pour rester le référentiel unique partagé.
 ============================================================ */
-const REQUEST_TYPES = [
-    "Certificat de baptême", "Certificat de mariage", "Certificat de décès",
-    "Demande de messe", "Baptême", "Mariage", "Confirmation", "Obsèques",
-    "Concert", "Réunion paroissiale", "Rendez-vous", "Inscription",
-    "Document administratif", "Autre"
-];
-
-const STATUS = ["En attente", "En cours", "Terminé", "Annulé"];
-const PRIORITIES = ["Normale", "Urgente"];
-
-// Toutes les demandes ne se gèrent pas pareil : un certificat est un
-// document à délivrer, un événement a une date/heure/lieu de cérémonie
-// à suivre (et alimente l'agenda). Cette catégorisation pilote
-// l'affichage du formulaire et de la fiche.
-const REQUEST_TYPE_CATEGORY = {
-    "Certificat de baptême": "certificate",
-    "Certificat de mariage": "certificate",
-    "Certificat de décès": "certificate",
-    "Document administratif": "certificate",
-    "Demande de messe": "event",
-    "Baptême": "event",
-    "Mariage": "event",
-    "Confirmation": "event",
-    "Obsèques": "event",
-    "Concert": "event",
-    "Réunion paroissiale": "event",
-    "Rendez-vous": "event",
-    "Inscription": "admin",
-    "Autre": "admin"
-};
-
 function requestCategory(type) {
     return REQUEST_TYPE_CATEGORY[type] || "admin";
 }
@@ -465,7 +436,24 @@ function showRequestDetail(id) {
                     <span class="badge ${statusClass(r.status)}">${escapeHTML(r.status)}</span>
                     <span class="badge ${r.priority === "Urgente" ? "urgent" : "normal"}">${r.priority === "Urgente" ? icon("alert-triangle", "icon-inline") : ""}${escapeHTML(r.priority)}</span>
                     ${r.archived ? `<span class="badge normal">Archivée</span>` : ""}
+                    ${history.length ? `<span class="badge normal">${icon("clock", "icon-inline")}${history.length} suivi${history.length > 1 ? "s" : ""}</span>` : ""}
                 </div>
+            </div>
+        </div>
+
+        <div class="fiche-section">
+            <h4 class="fiche-section-title">Historique${history.length ? ` (${history.length})` : ""}</h4>
+            <div class="history">
+                ${history.length
+                    ? history.map(h => `
+                        <div class="history-item">
+                            <div class="history-dot"></div>
+                            <div>
+                                <div class="history-text">${escapeHTML(h.description)}</div>
+                                <div class="history-date">${formatDateTime(h.createdAt)}</div>
+                            </div>
+                        </div>`).join("")
+                    : `<div class="empty">Aucun historique pour l'instant : les changements de statut et actions seront journalisés ici.</div>`}
             </div>
         </div>
 
@@ -516,19 +504,6 @@ function showRequestDetail(id) {
                 ${ficheField("Modifiée le", formatDateTime(r.updatedAt))}
                 ${r.completedAt ? ficheField("Terminée le", formatDateTime(r.completedAt)) : ""}
             </dl>
-            <div class="history">
-                <h5 class="history-title">Historique</h5>
-                ${history.length
-                    ? history.map(h => `
-                        <div class="history-item">
-                            <div class="history-dot"></div>
-                            <div>
-                                <div class="history-text">${escapeHTML(h.description)}</div>
-                                <div class="history-date">${formatDateTime(h.createdAt)}</div>
-                            </div>
-                        </div>`).join("")
-                    : `<div class="empty">Aucun historique.</div>`}
-            </div>
         </div>
     `;
 
