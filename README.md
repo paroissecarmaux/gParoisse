@@ -73,7 +73,7 @@ js/csv.js                   Parsing CSV générique (délimiteur, dates FR, date
 js/state.js                  État partagé, navigation plein écran, thème
 
 js/requests.js                 Module « Demandes »
-js/people.js                    Module « Personnes » (+ import CSV registre, certificats)
+js/people.js                    Module « Membres » (+ import CSV registre, certificats)
 js/schedule.js                   Module « Annonces » (horaires récurrents/ponctuels)
 js/clochers.js                    Module « Clochers » (référentiel des lieux)
 js/personnel.js                    Module « Personnel » (bénévoles, salariés, clergé)
@@ -81,6 +81,7 @@ js/intentions.js                    Module « Intentions de messe » (défunts, 
 js/overview.js                       Module « Tableau de bord » (vue d'ensemble)
 js/agenda.js                           Module « Agenda » (vue semaine/jour)
 js/settings.js                          Paramètres, export/import (JSON + CSV), effacement
+js/search.js                             Recherche globale (Ctrl+K / palette de commandes)
 
 js/main.js                            Initialisation, raccourcis clavier, câblage global,
                                        enregistrement du service worker
@@ -127,7 +128,7 @@ Chaque base peut être exportée et réimportée :
   dans un tableur. La colonne « ID » de l'export permet, en cas de
   réimportation, de mettre à jour un enregistrement existant plutôt que de le
   dupliquer.
-- **Import CSV « registre »** (page Personnes) : import spécifique à partir
+- **Import CSV « registre »** (page Membres) : import spécifique à partir
   d'un fichier de registre paroissial externe (colonnes en français, dates
   éventuellement au format Excel), distinct du format d'export/import CSV
   générique ci-dessus.
@@ -136,9 +137,19 @@ Chaque base peut être exportée et réimportée :
 
 | Touche | Effet |
 |---|---|
-| `/` | Place le curseur dans le champ de recherche de la section courante (Demandes, Personnes) |
-| `N` | Ouvre le formulaire de création pour la section courante (Demandes, Personnes, Annonces, Clochers, Personnel, Intentions) |
-| `Échap` | Retour à la page précédente (liste ou fiche détail) |
+| `Ctrl K` / `Cmd K` | Ouvre la recherche globale (membres, demandes, intentions, personnel, clochers) |
+| `/` | Sur Demandes/Membres : place le curseur dans le champ de recherche de la page. Ailleurs : ouvre la recherche globale. |
+| `N` | Ouvre le formulaire de création pour la section courante (Demandes, Membres, Annonces, Clochers, Personnel, Intentions) |
+| `↑` `↓` `↵` | Dans la recherche globale : naviguer entre les résultats, ouvrir la fiche sélectionnée |
+| `Échap` | Ferme la recherche globale si elle est ouverte, sinon retour à la page précédente |
+
+## Recherche globale
+
+Le champ « Rechercher… » de l'en-tête (ou `Ctrl+K`) ouvre un panneau qui
+interroge en direct les Membres, Demandes, Intentions de messe, le
+Personnel et les Clochers déjà chargés en mémoire, groupés par catégorie
+(8 résultats maximum par catégorie). Voir `js/search.js` — ajouter une base
+à cette recherche se fait en ajoutant une entrée à `GLOBAL_SEARCH_SOURCES`.
 
 ## Ajouter un nouveau module
 

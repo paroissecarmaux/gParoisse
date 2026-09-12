@@ -259,7 +259,7 @@ function filterRequestsByKpi(kpi) {
 ============================================================ */
 function personSuggestionLabel(p) {
     const contact = [p.telephone, p.email].filter(Boolean).join(" · ");
-    return `${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}${contact ? " — " + escapeHTML(contact) : ""}`;
+    return `${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}${p.dateDeces ? " †" : ""}${contact ? " — " + escapeHTML(contact) : ""}`;
 }
 
 function linkRequestToPerson(person) {
@@ -417,7 +417,7 @@ function showRequestDetail(id) {
     const linkedPerson = r.personId ? state.people.find(p => p.id === r.personId) : null;
     const linkedClocher = r.clocherId ? state.clochers.find(c => c.id === r.clocherId) : null;
 
-    $("#requestDetailTitle").textContent = r.name || "Demande sans nom";
+    $("#requestDetailTitle").textContent = `Demandes › ${r.name || "Demande sans nom"}`;
     $("#requestDetailSubtitle").textContent = `${r.type} · ${formatDate(r.dateDemande)}`;
 
     const history = state.history

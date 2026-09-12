@@ -76,16 +76,37 @@ function capitalize(s) {
     return s ? s[0].toLocaleUpperCase("fr-FR") + s.slice(1) : s;
 }
 
-function computeAge(dateStr) {
+// Relatif lisible ("il y a 3 jours") utilisé pour la date de dernière
+// sauvegarde (Tableau de bord et Paramètres).
+function formatRelativeTime(iso) {
+    if (!iso) return null;
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const diffH = Math.floor(diffMs / 3600000);
+    if (diffH < 1) return "à l'instant";
+    if (diffH < 24) return `il y a ${diffH} heure${diffH > 1 ? "s" : ""}`;
+    const diffD = Math.floor(diffH / 24);
+    return `il y a ${diffD} jour${diffD > 1 ? "s" : ""}`;
+}
+
+// asOfStr permet de calculer un âge à une date donnée (ex. âge au décès)
+// plutôt qu'à aujourd'hui, qui reste le comportement par défaut.
+function computeAge(dateStr, asOfStr) {
     if (!dateStr) return null;
     const [y, m, d] = String(dateStr).split("-").map(Number);
     if (!y || !m || !d) return null;
     const birth = new Date(y, m - 1, d);
-    const now = new Date();
-    let age = now.getFullYear() - birth.getFullYear();
+
+    let asOf = new Date();
+    if (asOfStr) {
+        const [ay, am, ad] = String(asOfStr).split("-").map(Number);
+        if (!ay || !am || !ad) return null;
+        asOf = new Date(ay, am - 1, ad);
+    }
+
+    let age = asOf.getFullYear() - birth.getFullYear();
     const hadBirthdayThisYear =
-        now.getMonth() > birth.getMonth() ||
-        (now.getMonth() === birth.getMonth() && now.getDate() >= birth.getDate());
+        asOf.getMonth() > birth.getMonth() ||
+        (asOf.getMonth() === birth.getMonth() && asOf.getDate() >= birth.getDate());
     if (!hadBirthdayThisYear) age--;
     return age;
 }
@@ -224,9 +245,13 @@ function downloadBlob(blob, filename) {
    TOAST
 ============================================================ */
 function toast(msg, type = "") {
+    const iconName = type === "success" ? "check-circle" : type === "error" ? "alert-triangle" : "bell";
     const el = document.createElement("div");
     el.className = `toast ${type}`;
-    el.textContent = msg;
+    el.innerHTML = `${icon(iconName, "icon-inline")}<span>${escapeHTML(msg)}</span>`;
     $("#toastContainer").appendChild(el);
-    setTimeout(() => el.remove(), 3400);
+    setTimeout(() => {
+        el.classList.add("toast-out");
+        setTimeout(() => el.remove(), 200);
+    }, 3400);
 }

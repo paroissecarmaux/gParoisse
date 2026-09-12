@@ -13,7 +13,7 @@ function peopleWithBirthdayToday() {
 
     return state.people
         .filter(p => {
-            if (!p.dateNaissance) return false;
+            if (!p.dateNaissance || p.dateDeces) return false;
             const [, m, d] = p.dateNaissance.split("-").map(Number);
             return m - 1 === mm && d === dd;
         })
@@ -109,6 +109,80 @@ function renderIntentionItem(i) {
     `;
 }
 
+/* ============================================================
+   « À FAIRE AUJOURD'HUI »
+   Liste actionnable qui centre l'expérience sur le jour en cours :
+   demandes urgentes/en retard, événements du jour, intentions
+   encore à célébrer aujourd'hui. Trois sources hétérogènes ramenées
+   à une forme commune {kind, id, icon, title, detail} pour un rendu
+   et un clic uniques.
+============================================================ */
+function todoUrgentRequests() {
+    return state.requests
+        .filter(r => !r.archived && (r.priority === "Urgente" || isOverdue(r)))
+        .sort((a, b) => (a.deadline || "9999-12-31").localeCompare(b.deadline || "9999-12-31"));
+}
+
+function todoTodayEvents() {
+    const today = todayISO();
+    return state.requests.filter(r =>
+        !r.archived && r.status !== "Annulé" &&
+        requestCategory(r.type) === "event" && r.dateEvenement === today
+    );
+}
+
+function todoIntentionsToCelebrateToday() {
+    const today = todayISO();
+    return state.intentions.filter(i => i.statut === "À célébrer" && intentionOccursOn(i, today));
+}
+
+function buildTodayTodoItems() {
+    const items = [];
+    const seenRequestIds = new Set();
+
+    todoUrgentRequests().forEach(r => {
+        seenRequestIds.add(r.id);
+        const tags = [r.priority === "Urgente" ? "Urgente" : "", isOverdue(r) ? "En retard" : ""].filter(Boolean).join(" · ");
+        items.push({
+            kind: "request", id: r.id, icon: "alert-triangle",
+            title: r.name || r.type,
+            detail: [tags, r.type].filter(Boolean).join(" · ")
+        });
+    });
+
+    todoTodayEvents().forEach(r => {
+        if (seenRequestIds.has(r.id)) return;
+        seenRequestIds.add(r.id);
+        items.push({
+            kind: "request", id: r.id, icon: "calendar",
+            title: r.type === "Obsèques" && r.defunt ? `Obsèques de ${r.defunt}` : (r.name || r.type),
+            detail: [r.heureEvenement, r.type].filter(Boolean).join(" · ")
+        });
+    });
+
+    todoIntentionsToCelebrateToday().forEach(i => {
+        items.push({
+            kind: "intention", id: i.id, icon: "candle",
+            title: i.intitule || i.type,
+            detail: [i.heure, i.type].filter(Boolean).join(" · ")
+        });
+    });
+
+    return items;
+}
+
+function renderTodoItem(item) {
+    return `
+        <div class="alert-item" data-kind="${escapeHTML(item.kind)}" data-id="${escapeHTML(item.id)}" role="listitem">
+            <div class="alert-marker"></div>
+            <div class="alert-main">
+                <div class="alert-name">${icon(item.icon, "icon-inline")}${escapeHTML(item.title)}</div>
+                <div class="alert-detail">${escapeHTML(item.detail)}</div>
+            </div>
+        </div>
+    `;
+}
+
 function renderOverview() {
     $("#overviewTodayLabel").textContent =
         new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
@@ -125,10 +199,15 @@ function renderOverview() {
     renderAnnounceList("#announceAnniversaires", anniversaires, renderAnniversaireItem, "Aucun anniversaire aujourd'hui.");
     renderAnnounceList("#announceIntentions", intentions, renderIntentionItem, "Aucune intention de messe aujourd'hui.");
 
+    const todoItems = buildTodayTodoItems();
+    renderAnnounceList("#overviewTodoList", todoItems, renderTodoItem, "Rien à faire pour l'instant : aucune demande urgente, aucun événement ni intention à célébrer aujourd'hui.");
+
     $("#overviewPeopleCount").textContent = state.people.length;
     $("#overviewPendingCount").textContent = state.requests.filter(r => !r.archived && r.status === "En attente").length;
     $("#overviewAlertCount").textContent = state.requests.filter(r => !r.archived && (r.priority === "Urgente" || isOverdue(r))).length;
     $("#overviewAnnounceCount").textContent = obseques.length + messes.length + horaires.length + anniversaires.length + intentions.length;
+
+    renderBackupStatus();
 }
 
 /* ============================================================
@@ -151,6 +230,18 @@ function initOverviewEvents() {
     $("#overviewKpis").addEventListener("click", e => {
         const btn = e.target.closest("[data-kpi]");
         if (btn) handleOverviewKpiClick(btn.dataset.kpi);
+    });
+
+    $("#overviewNewRequestBtn").addEventListener("click", () => showRequestForm(null));
+    $("#overviewNewIntentionBtn").addEventListener("click", () => showIntentionForm(null));
+    $("#overviewNewPersonBtn").addEventListener("click", () => showPersonForm(null));
+    $("#overviewBackupBtn").addEventListener("click", exportJSON);
+
+    $("#overviewTodoList").addEventListener("click", e => {
+        const item = e.target.closest("[data-kind]");
+        if (!item) return;
+        if (item.dataset.kind === "intention") showIntentionDetail(item.dataset.id);
+        else showRequestDetail(item.dataset.id);
     });
 
     $("#announceObseques").addEventListener("click", e => {

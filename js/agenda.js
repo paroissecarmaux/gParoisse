@@ -104,16 +104,57 @@ function renderAgendaDay() {
         : `<div class="empty">Rien de prévu ce jour-là.</div>`;
 }
 
-function renderAgenda() {
-    if (state.agendaView === "week") {
-        $("#agendaWeekView").hidden = false;
-        $("#agendaDayView").hidden = true;
-        renderAgendaWeek();
-    } else {
-        $("#agendaWeekView").hidden = true;
-        $("#agendaDayView").hidden = false;
-        renderAgendaDay();
+// Une plage arbitraire (ex. un mois) est rendue comme une liste de jours,
+// contrairement à la semaine (toujours 7 colonnes) : chaque jour affiche
+// son propre en-tête, même sans événement, pour ne rien laisser deviner.
+const AGENDA_RANGE_MAX_DAYS = 92;
+
+function renderAgendaRangeDay(iso) {
+    const events = agendaEventsForDate(iso);
+    const isToday = iso === todayISO();
+    return `
+        <div class="agenda-range-day ${isToday ? "today" : ""}">
+            <div class="agenda-range-day-header">${capitalize(formatWeekdayLong(iso))} ${formatDayMonth(iso)}</div>
+            ${events.length
+                ? `<div class="agenda-day-list" role="list">${events.map(renderAgendaDayItem).join("")}</div>`
+                : `<div class="agenda-empty-day">Rien de prévu.</div>`}
+        </div>
+    `;
+}
+
+function renderAgendaRange() {
+    let start = state.agendaRangeStart;
+    let end = state.agendaRangeEnd;
+    if (end < start) { [start, end] = [end, start]; }
+    if (daysBetween(start, end) > AGENDA_RANGE_MAX_DAYS) {
+        end = addDays(start, AGENDA_RANGE_MAX_DAYS);
+        state.agendaRangeEnd = end;
     }
+
+    $("#agendaRangeStart").value = start;
+    $("#agendaRangeEnd").value = end;
+    $("#agendaRangeLabel").textContent = `Du ${formatDayMonth(start)} au ${formatDayMonth(end)}`;
+
+    const days = [];
+    for (let iso = start; iso <= end; iso = addDays(iso, 1)) days.push(iso);
+    $("#agendaRangeView").innerHTML = days.map(renderAgendaRangeDay).join("");
+}
+
+function shiftAgendaRange(direction) {
+    const span = daysBetween(state.agendaRangeStart, state.agendaRangeEnd) + 1;
+    state.agendaRangeStart = addDays(state.agendaRangeStart, direction * span);
+    state.agendaRangeEnd = addDays(state.agendaRangeEnd, direction * span);
+}
+
+function renderAgenda() {
+    $("#agendaWeekView").hidden = state.agendaView !== "week";
+    $("#agendaDayView").hidden = state.agendaView !== "day";
+    $("#agendaRangeView").hidden = state.agendaView !== "range";
+    $("#agendaRangePicker").hidden = state.agendaView !== "range";
+
+    if (state.agendaView === "week") renderAgendaWeek();
+    else if (state.agendaView === "day") renderAgendaDay();
+    else renderAgendaRange();
 }
 
 /* ============================================================
@@ -129,15 +170,32 @@ function initAgendaEvents() {
     });
 
     $("#agendaPrevBtn").addEventListener("click", () => {
-        state.agendaDate = addDays(state.agendaDate, state.agendaView === "week" ? -7 : -1);
+        if (state.agendaView === "range") shiftAgendaRange(-1);
+        else state.agendaDate = addDays(state.agendaDate, state.agendaView === "week" ? -7 : -1);
         renderAgenda();
     });
     $("#agendaNextBtn").addEventListener("click", () => {
-        state.agendaDate = addDays(state.agendaDate, state.agendaView === "week" ? 7 : 1);
+        if (state.agendaView === "range") shiftAgendaRange(1);
+        else state.agendaDate = addDays(state.agendaDate, state.agendaView === "week" ? 7 : 1);
         renderAgenda();
     });
     $("#agendaTodayBtn").addEventListener("click", () => {
-        state.agendaDate = todayISO();
+        if (state.agendaView === "range") {
+            const span = daysBetween(state.agendaRangeStart, state.agendaRangeEnd);
+            state.agendaRangeStart = todayISO();
+            state.agendaRangeEnd = addDays(state.agendaRangeStart, span);
+        } else {
+            state.agendaDate = todayISO();
+        }
+        renderAgenda();
+    });
+
+    $("#agendaRangeStart").addEventListener("change", () => {
+        state.agendaRangeStart = $("#agendaRangeStart").value || state.agendaRangeStart;
+        renderAgenda();
+    });
+    $("#agendaRangeEnd").addEventListener("change", () => {
+        state.agendaRangeEnd = $("#agendaRangeEnd").value || state.agendaRangeEnd;
         renderAgenda();
     });
 
@@ -150,4 +208,5 @@ function initAgendaEvents() {
     };
     $("#agendaWeekView").addEventListener("click", handleEventClick);
     $("#agendaDayView").addEventListener("click", handleEventClick);
+    $("#agendaRangeView").addEventListener("click", handleEventClick);
 }

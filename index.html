@@ -74,26 +74,26 @@
         <button class="nav-item active" data-page="overview" type="button" aria-selected="true">
             <svg class="icon"><use href="#i-home"></use></svg> Tableau de bord
         </button>
-        <button class="nav-item" data-page="requests" type="button" aria-selected="false">
-            <svg class="icon"><use href="#i-file"></use></svg> Demandes
-        </button>
         <button class="nav-item" data-page="agenda" type="button" aria-selected="false">
             <svg class="icon"><use href="#i-calendar"></use></svg> Agenda
         </button>
+        <button class="nav-item" data-page="requests" type="button" aria-selected="false">
+            <svg class="icon"><use href="#i-file"></use></svg> Demandes
+        </button>
+        <button class="nav-item" data-page="intentions" type="button" aria-selected="false">
+            <svg class="icon"><use href="#i-candle"></use></svg> Intentions de messe
+        </button>
         <button class="nav-item" data-page="people" type="button" aria-selected="false">
-            <svg class="icon"><use href="#i-person"></use></svg> Les personnes
-        </button>
-        <button class="nav-item" data-page="announcements" type="button" aria-selected="false">
-            <svg class="icon"><use href="#i-bell"></use></svg> Annonces
-        </button>
-        <button class="nav-item" data-page="clochers" type="button" aria-selected="false">
-            <svg class="icon"><use href="#i-church"></use></svg> Clochers
+            <svg class="icon"><use href="#i-person"></use></svg> Membres
         </button>
         <button class="nav-item" data-page="personnel" type="button" aria-selected="false">
             <svg class="icon"><use href="#i-badge"></use></svg> Personnel
         </button>
-        <button class="nav-item" data-page="intentions" type="button" aria-selected="false">
-            <svg class="icon"><use href="#i-candle"></use></svg> Intentions de messe
+        <button class="nav-item" data-page="clochers" type="button" aria-selected="false">
+            <svg class="icon"><use href="#i-church"></use></svg> Clochers
+        </button>
+        <button class="nav-item" data-page="announcements" type="button" aria-selected="false">
+            <svg class="icon"><use href="#i-bell"></use></svg> Annonces
         </button>
     </nav>
     <div class="sidebar-footer">
@@ -110,6 +110,11 @@
         <button class="icon-btn sidebar-toggle" id="sidebarToggle" aria-label="Ouvrir le menu" aria-controls="sidebar" aria-expanded="false">
             <svg class="icon"><use href="#i-menu"></use></svg>
         </button>
+        <button class="global-search-trigger" id="globalSearchTrigger" type="button" aria-haspopup="dialog">
+            <svg class="icon"><use href="#i-search"></use></svg>
+            <span>Rechercher…</span>
+            <span class="global-search-kbd">Ctrl K</span>
+        </button>
         <div class="header-actions">
             <button class="btn secondary" id="themeBtn" title="Changer de thème" aria-label="Thème clair/sombre">
                 <svg class="icon"><use href="#i-moon"></use></svg>
@@ -120,6 +125,25 @@
         </div>
     </div>
 </header>
+
+<!-- ============================================================
+     RECHERCHE GLOBALE (overlay façon palette de commandes)
+============================================================ -->
+<div class="global-search-overlay" id="globalSearchOverlay" role="dialog" aria-modal="true" aria-label="Recherche globale" hidden>
+    <div class="global-search-backdrop" id="globalSearchBackdrop"></div>
+    <div class="global-search-panel">
+        <div class="global-search-input-wrap">
+            <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+            <input type="search" id="globalSearchInput" autocomplete="off" placeholder="Rechercher une personne, une demande, une intention…" aria-label="Recherche globale">
+        </div>
+        <div class="global-search-results" id="globalSearchResults"></div>
+        <div class="global-search-hint">
+            <span><span class="global-search-kbd">↑</span><span class="global-search-kbd">↓</span> naviguer</span>
+            <span><span class="global-search-kbd">↵</span> ouvrir</span>
+            <span><span class="global-search-kbd">Échap</span> fermer</span>
+        </div>
+    </div>
+</div>
 
 <main class="main">
 <div class="container">
@@ -134,13 +158,21 @@
             <h2 class="page-title">Tableau de bord</h2>
             <p class="page-description">Vue d'ensemble de la paroisse.</p>
         </div>
+        <div class="settings-actions">
+            <button class="btn btn-primary" id="overviewNewRequestBtn"><svg class="icon"><use href="#i-plus"></use></svg> Nouvelle demande</button>
+            <button class="btn" id="overviewNewIntentionBtn"><svg class="icon"><use href="#i-plus"></use></svg> Nouvelle intention</button>
+            <button class="btn" id="overviewNewPersonBtn"><svg class="icon"><use href="#i-plus"></use></svg> Nouvelle personne</button>
+            <button class="btn" id="overviewBackupBtn"><svg class="icon"><use href="#i-download"></use></svg> Sauvegarder maintenant</button>
+        </div>
     </div>
+
+    <div id="overviewBackupNotice"></div>
 
     <!-- KPI (cliquables) -->
     <section class="kpis" id="overviewKpis" aria-label="Indicateurs">
         <button type="button" class="kpi people" data-kpi="people">
             <div class="kpi-top">
-                <span class="kpi-label">Personnes</span>
+                <span class="kpi-label">Membres</span>
                 <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-person"></use></svg></div>
             </div>
             <div class="kpi-value" id="overviewPeopleCount">0</div>
@@ -170,6 +202,19 @@
             <div class="kpi-value" id="overviewAnnounceCount">0</div>
             <div class="kpi-note">Obsèques, messes, anniversaires, intentions</div>
         </button>
+    </section>
+
+    <!-- À faire aujourd'hui : liste actionnable, priorité au cockpit du jour -->
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h3 class="panel-title">À faire aujourd'hui</h3>
+                <p class="panel-subtitle">Demandes urgentes ou en retard, événements et intentions du jour</p>
+            </div>
+        </div>
+        <div class="panel-body">
+            <div id="overviewTodoList" class="alert-list" role="list"></div>
+        </div>
     </section>
 
     <!-- Annonces du jour -->
@@ -355,7 +400,7 @@
                     <div class="form-section-title first">Demande</div>
                     <div class="field autocomplete-field">
                         <label for="name">Nom et prénom *</label>
-                        <input id="name" name="name" required autocomplete="off" placeholder="Ex. Jean Dupont — recherche dans les personnes">
+                        <input id="name" name="name" required autocomplete="off" placeholder="Ex. Jean Dupont — recherche dans les membres">
                         <input type="hidden" id="requestPersonId">
                         <div class="dropdown-menu" id="nameAutocompleteMenu" hidden></div>
                         <div class="field-help">Tapez au moins 2 lettres pour retrouver une personne déjà enregistrée et lier la demande à sa fiche.</div>
@@ -453,7 +498,7 @@
 
     <div class="page-header">
         <div>
-            <h2 class="page-title">Les personnes</h2>
+            <h2 class="page-title">Membres</h2>
             <p class="page-description">
                 Annuaire des personnes de la paroisse.
             </p>
@@ -500,6 +545,30 @@
             <div class="kpi-value" id="peopleStatRgpd">0</div>
             <div class="kpi-note">Paroissiens sans consentement enregistré</div>
         </button>
+        <button type="button" class="kpi done" data-kpi="confirmed">
+            <div class="kpi-top">
+                <span class="kpi-label">Confirmés</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-check-circle"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="peopleStatConfirmes">0</div>
+            <div class="kpi-note">Sacrement de confirmation reçu</div>
+        </button>
+        <button type="button" class="kpi progress" data-kpi="married">
+            <div class="kpi-top">
+                <span class="kpi-label">Mariés</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-cross"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="peopleStatMaries">0</div>
+            <div class="kpi-note">Sacrement de mariage reçu</div>
+        </button>
+        <button type="button" class="kpi archived" data-kpi="deceased">
+            <div class="kpi-top">
+                <span class="kpi-label">Défunts</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-cross"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="peopleStatDefunts">0</div>
+            <div class="kpi-note">Date de décès renseignée</div>
+        </button>
     </section>
 
     <section class="panel">
@@ -540,6 +609,7 @@
                     <button type="button" class="dropdown-item" data-cert="mariage">Certificat de mariage</button>
                 </div>
             </div>
+            <button class="btn" id="personNewIntentionBtn"><svg class="icon"><use href="#i-candle"></use></svg> Créer une intention</button>
             <button class="btn" id="personEditBtn"><svg class="icon"><use href="#i-edit"></use></svg> Modifier</button>
             <button class="btn btn-danger" id="personDeleteBtn"><svg class="icon"><use href="#i-trash"></use></svg> Supprimer</button>
         </div>
@@ -590,6 +660,11 @@
                     <div class="field">
                         <label for="personLieuNaissance">Lieu de naissance</label>
                         <input id="personLieuNaissance" placeholder="Ex. Carmaux">
+                    </div>
+                    <div class="field">
+                        <label for="personDateDeces">Date de décès</label>
+                        <input id="personDateDeces" type="date">
+                        <div class="field-help">Laisser vide si la personne est vivante.</div>
                     </div>
 
                     <div class="form-section-title">Contact</div>
@@ -714,6 +789,7 @@
             <div class="panel-footer">
                 <button type="button" class="btn" id="personFormCancelBtn">Annuler</button>
                 <button type="submit" class="btn btn-primary"><svg class="icon"><use href="#i-check"></use></svg> Enregistrer</button>
+                <button type="submit" class="btn" data-action="save-and-new">Enregistrer et créer une autre</button>
             </div>
         </form>
     </section>
@@ -1307,7 +1383,7 @@
                     <div class="form-section-title">Demandeur</div>
                     <div class="field full autocomplete-field">
                         <label for="intentionDemandeur">Demandeur</label>
-                        <input id="intentionDemandeur" autocomplete="off" placeholder="Recherche dans les personnes">
+                        <input id="intentionDemandeur" autocomplete="off" placeholder="Recherche dans les membres">
                         <input type="hidden" id="intentionPersonId">
                         <div class="dropdown-menu" id="demandeurAutocompleteMenu" hidden></div>
                     </div>
@@ -1357,6 +1433,7 @@
             <div class="panel-footer">
                 <button type="button" class="btn" id="intentionFormCancelBtn">Annuler</button>
                 <button type="submit" class="btn btn-primary"><svg class="icon"><use href="#i-check"></use></svg> Enregistrer</button>
+                <button type="submit" class="btn" data-action="save-and-new">Enregistrer et créer une autre</button>
             </div>
         </form>
     </section>
@@ -1376,6 +1453,7 @@
             <div class="segmented" id="agendaViewToggle">
                 <button type="button" class="segmented-btn active" data-agenda-view="week">Semaine</button>
                 <button type="button" class="segmented-btn" data-agenda-view="day">Jour</button>
+                <button type="button" class="segmented-btn" data-agenda-view="range">Plage</button>
             </div>
             <button class="btn" id="agendaTodayBtn">Aujourd'hui</button>
         </div>
@@ -1387,9 +1465,14 @@
             <h3 class="panel-title" id="agendaRangeLabel"></h3>
             <button class="icon-btn" id="agendaNextBtn" aria-label="Période suivante"><svg class="icon icon-flip"><use href="#i-arrow-left"></use></svg></button>
         </div>
+        <div class="agenda-range-picker" id="agendaRangePicker" hidden>
+            <label>Du <input type="date" id="agendaRangeStart"></label>
+            <label>au <input type="date" id="agendaRangeEnd"></label>
+        </div>
         <div class="panel-body">
             <div id="agendaWeekView" class="agenda-week"></div>
             <div id="agendaDayView" class="agenda-day" hidden></div>
+            <div id="agendaRangeView" class="agenda-range-list" hidden></div>
         </div>
     </section>
 
@@ -1407,12 +1490,19 @@
         </div>
     </div>
 
-    <div class="local-notice">
-        <svg class="icon" aria-hidden="true"><use href="#i-alert-triangle"></use></svg>
-        <p>Toutes les données restent <strong>uniquement sur cet appareil</strong> (aucun serveur, aucune synchronisation). Pensez à exporter une <strong>sauvegarde JSON</strong> régulièrement : c'est le seul moyen de les récupérer en cas de problème.</p>
-    </div>
-
     <section class="panel">
+        <section class="settings-section" id="backupSection">
+            <h3 class="settings-title">Sauvegarde des données</h3>
+            <p class="settings-description">
+                Les données sont stockées <strong>uniquement dans ce navigateur</strong> (aucun serveur, aucune
+                synchronisation). Une exportation JSON régulière est indispensable : c'est le seul moyen de les
+                récupérer en cas de problème.
+            </p>
+            <div id="settingsBackupStatus"></div>
+            <div class="settings-actions">
+                <button class="btn btn-primary" id="settingsBackupNowBtn"><svg class="icon"><use href="#i-download"></use></svg> Sauvegarder maintenant</button>
+            </div>
+        </section>
         <section class="settings-section">
             <h3 class="settings-title">Paroisse</h3>
             <p class="settings-description">Ce nom apparaît dans la barre latérale.</p>
@@ -1510,6 +1600,7 @@
 <script src="js/overview.js"></script>
 <script src="js/agenda.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/search.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

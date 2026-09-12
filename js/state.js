@@ -35,6 +35,8 @@ const state = {
     intentionFormMode: "new",
     agendaView: "week",
     agendaDate: todayISO(),
+    agendaRangeStart: startOfWeekISO(todayISO()),
+    agendaRangeEnd: addDays(startOfWeekISO(todayISO()), 6),
     importMode: "merge",
     csvImportModuleKey: "requests",
     settings: {

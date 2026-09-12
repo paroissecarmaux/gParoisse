@@ -217,7 +217,8 @@ async function saveIntention(e) {
         renderOverview();
         renderAgenda();
         toast(existing ? "Intention modifiée." : "Intention ajoutée.", "success");
-        showIntentionDetail(intention.id);
+        if (e.submitter?.dataset.action === "save-and-new") showIntentionForm(null);
+        else showIntentionDetail(intention.id);
     } catch (err) {
         console.error(err);
         toast("Impossible d'enregistrer cette intention.", "error");
@@ -233,7 +234,7 @@ function showIntentionDetail(id) {
     const linkedClocher = i.clocherId ? state.clochers.find(c => c.id === i.clocherId) : null;
     const linkedCelebrant = i.personnelId ? state.personnel.find(p => p.id === i.personnelId) : null;
 
-    $("#intentionDetailTitle").textContent = i.intitule || i.type;
+    $("#intentionDetailTitle").textContent = `Intentions › ${i.intitule || i.type}`;
 
     $("#intentionDetailBody").innerHTML = `
         <div class="fiche-header">

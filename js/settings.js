@@ -28,6 +28,50 @@ async function saveSettings() {
 }
 
 /* ============================================================
+   STATUT DE SAUVEGARDE
+   Affiché à la fois sur le Tableau de bord (bannière) et dans
+   Paramètres : au-delà de 7 jours sans export JSON, on bascule en
+   style d'alerte pour inciter à sauvegarder.
+============================================================ */
+const BACKUP_STALE_DAYS = 7;
+
+function backupStatus() {
+    const last = state.settings.lastBackup;
+    if (!last) {
+        return { stale: true, text: "Aucune sauvegarde JSON n'a encore été faite." };
+    }
+    const diffDays = Math.floor((Date.now() - new Date(last).getTime()) / 86400000);
+    const relative = formatRelativeTime(last);
+    return diffDays > BACKUP_STALE_DAYS
+        ? { stale: true, text: `Dernière sauvegarde ${relative}.` }
+        : { stale: false, text: `Dernière sauvegarde : ${relative}.` };
+}
+
+function renderBackupStatus() {
+    const { stale, text } = backupStatus();
+
+    const overviewEl = $("#overviewBackupNotice");
+    if (overviewEl) {
+        overviewEl.innerHTML = stale
+            ? `<div class="local-notice">
+                    <svg class="icon" aria-hidden="true"><use href="#i-alert-triangle"></use></svg>
+                    <p>${escapeHTML(text)} Pensez à exporter une <strong>sauvegarde JSON</strong> régulièrement.</p>
+                </div>`
+            : `<p class="backup-discreet">${icon("check-circle", "icon-inline")}${escapeHTML(text)}</p>`;
+    }
+
+    const settingsEl = $("#settingsBackupStatus");
+    if (settingsEl) {
+        settingsEl.innerHTML = stale
+            ? `<div class="local-notice">
+                    <svg class="icon" aria-hidden="true"><use href="#i-alert-triangle"></use></svg>
+                    <p>${escapeHTML(text)} Le stockage du navigateur n'est pas fiable : exportez une sauvegarde JSON régulièrement.</p>
+                </div>`
+            : `<p class="backup-discreet">${icon("check-circle", "icon-inline")}${escapeHTML(text)}</p>`;
+    }
+}
+
+/* ============================================================
    EXPORT / IMPORT (toutes les bases)
    Registre déclaratif : ajouter un futur module (nouvelle base
    Dexie) ne demande qu'une entrée ici plutôt que de dupliquer la
@@ -99,6 +143,7 @@ const DATA_MODULES = [
             { key: "nom", header: "Nom" },
             { key: "dateNaissance", header: "Date de naissance", type: "date" },
             { key: "lieuNaissance", header: "Lieu de naissance" },
+            { key: "dateDeces", header: "Date de décès", type: "date" },
             { key: "telephone", header: "Téléphone" },
             { key: "email", header: "E-mail" },
             { key: "adresse", header: "Adresse" },
@@ -237,6 +282,7 @@ async function exportJSON() {
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
     downloadBlob(blob, `paroisse-sauvegarde-${todayISO()}.json`);
     await saveSetting("lastBackup", nowISO());
+    renderBackupStatus();
     toast("Sauvegarde JSON créée.", "success");
 }
 
@@ -399,6 +445,7 @@ async function clearDatabase() {
 function initSettingsEvents() {
     $("#exportJsonBtn").addEventListener("click", exportJSON);
     $("#settingsExportJson").addEventListener("click", exportJSON);
+    $("#settingsBackupNowBtn").addEventListener("click", exportJSON);
     $("#saveSettingsBtn").addEventListener("click", saveSettings);
     $("#clearDataBtn").addEventListener("click", clearDatabase);
     $("#mergeImportBtn").addEventListener("click", () => selectImportFile("merge"));

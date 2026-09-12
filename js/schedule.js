@@ -207,7 +207,7 @@ function showScheduleDetail(id) {
 
     const linkedClocher = s.clocherId ? state.clochers.find(c => c.id === s.clocherId) : null;
 
-    $("#scheduleDetailTitle").textContent = s.title || "Annonce";
+    $("#scheduleDetailTitle").textContent = `Annonces › ${s.title || "Annonce"}`;
 
     $("#scheduleDetailBody").innerHTML = `
         <div class="fiche-header">

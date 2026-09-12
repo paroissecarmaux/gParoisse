@@ -22,6 +22,16 @@ function initGlobalEvents() {
     });
 
     document.addEventListener("keydown", e => {
+        // Le panneau de recherche globale gère ses propres touches
+        // (flèches, Entrée, Échap) tant qu'il est ouvert.
+        if (isGlobalSearchOpen()) return;
+
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+            e.preventDefault();
+            openGlobalSearch();
+            return;
+        }
+
         const tag = document.activeElement?.tagName;
         const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 
@@ -30,8 +40,11 @@ function initGlobalEvents() {
         const section = PAGE_SECTION[state.page];
 
         if (e.key === "/" && !typing) {
-            if (section === "requests") { e.preventDefault(); $("#searchInput").focus(); }
-            else if (section === "people") { e.preventDefault(); $("#peopleSearchInput").focus(); }
+            e.preventDefault();
+            if (section === "requests") { $("#searchInput").focus(); }
+            else if (section === "people") { $("#peopleSearchInput").focus(); }
+            else { openGlobalSearch(); }
+            return;
         }
 
         if (e.key.toLowerCase() === "n" && !typing && !e.ctrlKey && !e.metaKey) {
@@ -71,6 +84,7 @@ async function init() {
     initOverviewEvents();
     initAgendaEvents();
     initSettingsEvents();
+    initGlobalSearchEvents();
     initGlobalEvents();
 
     try {
@@ -81,6 +95,7 @@ async function init() {
         renderPersonnelFormOptions();
         renderIntentionFormOptions();
         await loadSettings();
+        renderBackupStatus();
         await loadRequestsData();
         await loadPeopleData();
         await loadScheduleData();

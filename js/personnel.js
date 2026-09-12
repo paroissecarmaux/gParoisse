@@ -204,7 +204,7 @@ function showPersonnelDetail(id) {
 
     const relatedIntentions = relatedIntentionsFor(p);
 
-    $("#personnelDetailTitle").textContent = `${p.prenom} ${p.nom}`.trim() || "Personnel";
+    $("#personnelDetailTitle").textContent = `Personnel › ${`${p.prenom} ${p.nom}`.trim() || "Membre"}`;
 
     $("#personnelDetailBody").innerHTML = `
         <div class="fiche-header">

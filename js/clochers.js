@@ -179,7 +179,7 @@ function showClocherDetail(id) {
     if (!c) return;
     state.selectedClocherId = id;
 
-    $("#clocherDetailTitle").textContent = c.nom || "Clocher";
+    $("#clocherDetailTitle").textContent = `Clochers › ${c.nom || "Clocher"}`;
 
     $("#clocherDetailBody").innerHTML = `
         <div class="fiche-header">

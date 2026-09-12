@@ -24,9 +24,18 @@ function isParoissien(p) {
 }
 
 function personBirthLine(p) {
+    if (p.dateDeces) {
+        const ageAtDeath = computeAge(p.dateNaissance, p.dateDeces);
+        const born = p.dateNaissance ? formatDate(p.dateNaissance) : "?";
+        return `${born} – ${formatDate(p.dateDeces)}${ageAtDeath !== null ? ` · ${ageAtDeath} an${ageAtDeath > 1 ? "s" : ""}` : ""}`;
+    }
     if (!p.dateNaissance) return "Date de naissance inconnue";
     const age = computeAge(p.dateNaissance);
     return `${formatDate(p.dateNaissance)}${age !== null ? " · " + age + " an" + (age > 1 ? "s" : "") : ""}`;
+}
+
+function deceasedBadge() {
+    return `<span class="badge cancelled">Défunt(e)</span>`;
 }
 
 function sacramentBadge(label, done) {
@@ -52,19 +61,31 @@ function filteredPeople() {
     if (state.peopleQuickFilter === "paroissien") result = result.filter(isParoissien);
     else if (state.peopleQuickFilter === "contact") result = result.filter(p => !isParoissien(p));
     else if (state.peopleQuickFilter === "rgpd") result = result.filter(p => isParoissien(p) && !p.rgpd);
+    else if (state.peopleQuickFilter === "confirmed") result = result.filter(p => isParoissien(p) && p.dateConfirmation);
+    else if (state.peopleQuickFilter === "married") result = result.filter(p => isParoissien(p) && p.dateMariage);
+    else if (state.peopleQuickFilter === "deceased") result = result.filter(p => p.dateDeces);
     result.sort((a, b) => (a._sortKey < b._sortKey ? -1 : a._sortKey > b._sortKey ? 1 : 0));
     return result;
 }
 
 function renderPeopleSummary() {
-    let paroissiens = 0, rgpdMissing = 0;
+    let paroissiens = 0, rgpdMissing = 0, confirmes = 0, maries = 0, defunts = 0;
     state.people.forEach(p => {
-        if (isParoissien(p)) { paroissiens++; if (!p.rgpd) rgpdMissing++; }
+        if (p.dateDeces) defunts++;
+        if (isParoissien(p)) {
+            paroissiens++;
+            if (!p.rgpd) rgpdMissing++;
+            if (p.dateConfirmation) confirmes++;
+            if (p.dateMariage) maries++;
+        }
     });
     $("#peopleStatTotal").textContent = state.people.length;
     $("#peopleStatParoissiens").textContent = paroissiens;
     $("#peopleStatContacts").textContent = state.people.length - paroissiens;
     $("#peopleStatRgpd").textContent = rgpdMissing;
+    $("#peopleStatConfirmes").textContent = confirmes;
+    $("#peopleStatMaries").textContent = maries;
+    $("#peopleStatDefunts").textContent = defunts;
 }
 
 function filterPeopleByKpi(kpi) {
@@ -95,8 +116,10 @@ function renderPersonCard(p) {
             </div>
             <div class="badge-row">
                 ${profileTypeBadge(p)}
+                ${p.dateDeces ? deceasedBadge() : ""}
                 ${isParoissien(p) ? sacramentBadge("Baptême", Boolean(p.dateBapteme)) : ""}
                 ${isParoissien(p) ? sacramentBadge("Confirmation", Boolean(p.dateConfirmation)) : ""}
+                ${isParoissien(p) && p.dateMariage ? `<span class="badge progress">${icon("cross", "icon-inline")}Marié(e)</span>` : ""}
             </div>
             <div class="request-actions">
                 <button class="icon-btn" data-action="edit" title="Modifier" aria-label="Modifier">${icon("edit")}</button>
@@ -139,6 +162,7 @@ function fillPersonForm(p) {
     $("#personNom").value = p.nom || "";
     $("#personDateNaissance").value = p.dateNaissance || "";
     $("#personLieuNaissance").value = p.lieuNaissance || "";
+    $("#personDateDeces").value = p.dateDeces || "";
     $("#personPere").value = p.pere || "";
     $("#personMere").value = p.mere || "";
     $("#personTelephone").value = p.telephone || "";
@@ -203,6 +227,7 @@ async function savePerson(e) {
         nom,
         dateNaissance: $("#personDateNaissance").value,
         lieuNaissance: $("#personLieuNaissance").value.trim(),
+        dateDeces: $("#personDateDeces").value,
         pere: $("#personPere").value.trim(),
         mere: $("#personMere").value.trim(),
         telephone: $("#personTelephone").value.trim(),
@@ -242,7 +267,8 @@ async function savePerson(e) {
         renderPeopleSummary();
         renderOverview();
         toast(existing ? "Personne modifiée." : "Personne ajoutée.", "success");
-        showPersonDetail(person.id);
+        if (e.submitter?.dataset.action === "save-and-new") showPersonForm(null);
+        else showPersonDetail(person.id);
     } catch (err) {
         console.error(err);
         toast("Impossible d'enregistrer cette personne.", "error");
@@ -279,7 +305,7 @@ function showPersonDetail(id) {
     if (!p) return;
     state.selectedPersonId = id;
 
-    $("#personDetailTitle").textContent = `${p.prenom} ${p.nom}`.trim() || "Personne";
+    $("#personDetailTitle").textContent = `Membres › ${`${p.prenom} ${p.nom}`.trim() || "Personne"}`;
     const paroissien = isParoissien(p);
 
     if (!paroissien) {
@@ -290,7 +316,7 @@ function showPersonDetail(id) {
                     <div class="fiche-heading">
                         <h3 class="fiche-name">${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}</h3>
                         <p class="fiche-meta">${personBirthLine(p)}${p.lieuNaissance ? " · né(e) à " + escapeHTML(p.lieuNaissance) : ""}</p>
-                        <div class="fiche-chips">${profileTypeBadge(p)}</div>
+                        <div class="fiche-chips">${profileTypeBadge(p)}${p.dateDeces ? deceasedBadge() : ""}</div>
                     </div>
                 </div>
                 <div class="fiche-section">
@@ -299,6 +325,7 @@ function showPersonDetail(id) {
                         ${ficheField("Téléphone", escapeHTML(p.telephone))}
                         ${ficheField("E-mail", escapeHTML(p.email))}
                         ${ficheField("Adresse", escapeHTML(p.adresse), true)}
+                        ${ficheField("Date de décès", p.dateDeces ? formatDate(p.dateDeces) : "")}
                         ${ficheField("Notes", escapeHTML(p.notes) || "Aucune observation.", true)}
                     </dl>
                 </div>
@@ -322,6 +349,7 @@ function showPersonDetail(id) {
                 <p class="fiche-side-meta">${personBirthLine(p)}</p>
                 <div class="fiche-side-badges">
                     ${profileTypeBadge(p)}
+                    ${p.dateDeces ? deceasedBadge() : ""}
                     <span class="badge ${p.rgpd ? "done" : "normal"}">${icon(p.rgpd ? "check-circle" : "x-circle", "icon-inline")}RGPD</span>
                 </div>
                 <div class="fiche-side-actions">
@@ -339,6 +367,7 @@ function showPersonDetail(id) {
                         ${sideField("E-mail", escapeHTML(p.email))}
                         ${sideField("Adresse", escapeHTML(p.adresse))}
                         ${sideField("Lieu de naissance", escapeHTML(p.lieuNaissance))}
+                        ${sideField("Date de décès", p.dateDeces ? formatDate(p.dateDeces) : "")}
                     </dl>
                 </details>
 
@@ -530,6 +559,17 @@ function generateCertificate(kind, p) {
     openPrintWindow(`${cert.label} — ${p.prenom} ${p.nom}`, certificateBody(kind, p));
 }
 
+// Ouvre le formulaire Intentions déjà pré-rempli avec cette personne comme
+// demandeur, plutôt que de la rechercher à nouveau dans l'autocomplete.
+function createIntentionForPerson(id) {
+    const p = state.people.find(x => x.id === id);
+    if (!p) return;
+    showIntentionForm(null);
+    $("#intentionDemandeur").value = `${p.prenom} ${p.nom}`.trim();
+    $("#intentionPersonId").value = p.id;
+    $("#intentionContact").value = p.telephone || p.email || "";
+}
+
 async function deletePerson(id) {
     const p = state.people.find(x => x.id === id);
     if (!p) return;
@@ -569,6 +609,9 @@ const CSV_FIELD_MAP = {
     mere: "mere",
     datenaissance: "dateNaissance",
     lieunaissance: "lieuNaissance",
+    datedeces: "dateDeces",
+    datededeces: "dateDeces",
+    deces: "dateDeces",
     parrain: "parrain",
     marraine: "marraine",
     temoin: "temoin",
@@ -585,7 +628,7 @@ const CSV_FIELD_MAP = {
     email: "email"
 };
 
-const CSV_DATE_FIELDS = ["dateNaissance", "dateBapteme", "dateConfirmation", "dateMariage"];
+const CSV_DATE_FIELDS = ["dateNaissance", "dateDeces", "dateBapteme", "dateConfirmation", "dateMariage"];
 
 async function importPeopleCSV(file) {
     if (!file) return;
@@ -648,6 +691,7 @@ function initPeopleEvents() {
     $("#personDetailBackBtn").addEventListener("click", goBack);
     $("#personEditBtn").addEventListener("click", () => state.selectedPersonId && showPersonForm(state.selectedPersonId));
     $("#personDeleteBtn").addEventListener("click", () => state.selectedPersonId && deletePerson(state.selectedPersonId));
+    $("#personNewIntentionBtn").addEventListener("click", () => state.selectedPersonId && createIntentionForPerson(state.selectedPersonId));
 
     $("#personDetailBody").addEventListener("click", e => {
         const tab = e.target.closest(".fiche-tab");
