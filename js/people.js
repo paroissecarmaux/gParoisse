@@ -60,7 +60,6 @@ function filteredPeople() {
     let result = query ? state.people.filter(p => p._search.includes(query)) : state.people.slice();
     if (state.peopleQuickFilter === "paroissien") result = result.filter(isParoissien);
     else if (state.peopleQuickFilter === "contact") result = result.filter(p => !isParoissien(p));
-    else if (state.peopleQuickFilter === "rgpd") result = result.filter(p => isParoissien(p) && !p.rgpd);
     else if (state.peopleQuickFilter === "confirmed") result = result.filter(p => isParoissien(p) && p.dateConfirmation);
     else if (state.peopleQuickFilter === "married") result = result.filter(p => isParoissien(p) && p.dateMariage);
     else if (state.peopleQuickFilter === "deceased") result = result.filter(p => p.dateDeces);
@@ -69,12 +68,11 @@ function filteredPeople() {
 }
 
 function renderPeopleSummary() {
-    let paroissiens = 0, rgpdMissing = 0, confirmes = 0, maries = 0, defunts = 0;
+    let paroissiens = 0, confirmes = 0, maries = 0, defunts = 0;
     state.people.forEach(p => {
         if (p.dateDeces) defunts++;
         if (isParoissien(p)) {
             paroissiens++;
-            if (!p.rgpd) rgpdMissing++;
             if (p.dateConfirmation) confirmes++;
             if (p.dateMariage) maries++;
         }
@@ -82,7 +80,6 @@ function renderPeopleSummary() {
     $("#peopleStatTotal").textContent = state.people.length;
     $("#peopleStatParoissiens").textContent = paroissiens;
     $("#peopleStatContacts").textContent = state.people.length - paroissiens;
-    $("#peopleStatRgpd").textContent = rgpdMissing;
     $("#peopleStatConfirmes").textContent = confirmes;
     $("#peopleStatMaries").textContent = maries;
     $("#peopleStatDefunts").textContent = defunts;
