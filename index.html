@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f8fafc">
+<meta name="theme-color" content="#f6f2ec">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Secrétariat paroissial de Carmaux-Valence</title>
@@ -15,22 +15,55 @@
 </head>
 
 <body>
+
+<!-- ============================================================
+     SPRITE D'ICÔNES (formes définies une seule fois, référencées
+     partout via <use href="#i-nom">)
+============================================================ -->
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+<defs>
+<symbol id="i-home" viewBox="0 0 24 24"><polyline points="4,12 12,5 20,12"/><polyline points="7,11 7,20 17,20 17,11"/></symbol>
+<symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.3"/><polyline points="5,20 6,16.5 9,15 15,15 18,16.5 19,20"/></symbol>
+<symbol id="i-cross" viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="9" x2="19" y2="9"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="15"/><polyline points="7,10 12,15 17,10"/><line x1="5" y1="20" x2="19" y2="20"/></symbol>
+<symbol id="i-upload" viewBox="0 0 24 24"><line x1="12" y1="21" x2="12" y2="9"/><polyline points="7,14 12,9 17,14"/><line x1="5" y1="4" x2="19" y2="4"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.4"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/><line x1="5.6" y1="5.6" x2="7.7" y2="7.7"/><line x1="16.3" y1="16.3" x2="18.4" y2="18.4"/><line x1="5.6" y1="18.4" x2="7.7" y2="16.3"/><line x1="16.3" y1="7.7" x2="18.4" y2="5.6"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.3" y1="15.3" x2="21" y2="21"/></symbol>
+<symbol id="i-arrow-left" viewBox="0 0 24 24"><line x1="20" y1="12" x2="5" y2="12"/><polyline points="11,6 5,12 11,18"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><polygon points="4,20 4,16.2 14.6,5.6 18.4,9.4 7.8,20"/><line x1="12.8" y1="7.4" x2="16.6" y2="11.2"/></symbol>
+<symbol id="i-archive" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="4"/><line x1="6" y1="10" x2="6" y2="18"/><line x1="18" y1="10" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="18"/><line x1="10" y1="14" x2="14" y2="14"/></symbol>
+<symbol id="i-restore" viewBox="0 0 24 24"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><polyline points="23,4 23,10 17,10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><polyline points="4,7 20,7"/><rect x="6" y="7" width="12" height="13"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><polyline points="9,7 9,4 15,4 15,7"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><polyline points="4,12 9,17 20,6"/></symbol>
+<symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><polyline points="8,12.3 11,15.3 16,9.3"/></symbol>
+<symbol id="i-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><polyline points="12,7.5 12,12.3 15.8,14.3"/></symbol>
+<symbol id="i-alert-triangle" viewBox="0 0 24 24"><polygon points="12,3 22,20 2,20"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="16.8" r="0.9" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
+</defs>
+</svg>
+
 <div class="app">
 
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-        <div class="brand-icon" aria-hidden="true">✝</div>
+        <div class="brand-icon" aria-hidden="true"><svg class="icon"><use href="#i-cross"></use></svg></div>
         <div class="brand-text">
             <div class="brand-title" id="brandTitle">Secrétariat paroissial de Carmaux-Valence</div>
         </div>
     </div>
     <nav class="sidebar-nav" aria-label="Navigation principale">
         <button class="nav-item active" data-page="dashboard" type="button" aria-selected="true">
-            <span aria-hidden="true">⌂</span> Tableau de bord
+            <svg class="icon"><use href="#i-home"></use></svg> Tableau de bord
         </button>
         <button class="nav-item" data-page="people" type="button" aria-selected="false">
-            <span aria-hidden="true">◈</span> Les personnes
+            <svg class="icon"><use href="#i-person"></use></svg> Les personnes
         </button>
     </nav>
 </aside>
@@ -39,10 +72,16 @@
 
 <header class="header">
     <div class="header-inner">
-        <button class="icon-btn sidebar-toggle" id="sidebarToggle" aria-label="Ouvrir le menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+        <button class="icon-btn sidebar-toggle" id="sidebarToggle" aria-label="Ouvrir le menu" aria-controls="sidebar" aria-expanded="false">
+            <svg class="icon"><use href="#i-menu"></use></svg>
+        </button>
         <div class="header-actions">
-            <button class="btn secondary" id="themeBtn" title="Changer de thème" aria-label="Thème clair/sombre">☾</button>
-            <button class="btn secondary" id="exportJsonBtn" title="Sauvegarder les données">↓ Sauvegarde</button>
+            <button class="btn secondary" id="themeBtn" title="Changer de thème" aria-label="Thème clair/sombre">
+                <svg class="icon"><use href="#i-moon"></use></svg>
+            </button>
+            <button class="btn secondary" id="exportJsonBtn" title="Sauvegarder les données">
+                <svg class="icon"><use href="#i-download"></use></svg> Sauvegarde
+            </button>
         </div>
     </div>
 </header>
@@ -63,8 +102,8 @@
             </p>
         </div>
         <div class="settings-actions">
-            <button class="btn btn-primary" id="newRequestBtn">＋ Nouvelle demande</button>
-            <button class="btn" id="settingsBtn">⚙ Paramètres</button>
+            <button class="btn btn-primary" id="newRequestBtn"><svg class="icon"><use href="#i-plus"></use></svg> Nouvelle demande</button>
+            <button class="btn" id="settingsBtn"><svg class="icon"><use href="#i-settings"></use></svg> Paramètres</button>
         </div>
     </div>
 
@@ -73,7 +112,7 @@
         <div class="kpi pending">
             <div class="kpi-top">
                 <span class="kpi-label">En attente</span>
-                <div class="kpi-icon" aria-hidden="true">◷</div>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-clock"></use></svg></div>
             </div>
             <div class="kpi-value" id="statPending">0</div>
             <div class="kpi-note">Demandes à prendre en charge</div>
@@ -81,7 +120,7 @@
         <div class="kpi progress">
             <div class="kpi-top">
                 <span class="kpi-label">En cours</span>
-                <div class="kpi-icon" aria-hidden="true">↻</div>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-refresh"></use></svg></div>
             </div>
             <div class="kpi-value" id="statProgress">0</div>
             <div class="kpi-note">Dossiers actuellement traités</div>
@@ -89,7 +128,7 @@
         <div class="kpi done">
             <div class="kpi-top">
                 <span class="kpi-label">Terminées</span>
-                <div class="kpi-icon" aria-hidden="true">✓</div>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-check-circle"></use></svg></div>
             </div>
             <div class="kpi-value" id="statDone">0</div>
             <div class="kpi-note">Demandes clôturées</div>
@@ -97,7 +136,7 @@
         <div class="kpi alert">
             <div class="kpi-top">
                 <span class="kpi-label">À surveiller</span>
-                <div class="kpi-icon" aria-hidden="true">!</div>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-alert-triangle"></use></svg></div>
             </div>
             <div class="kpi-value" id="statAlerts">0</div>
             <div class="kpi-note">Urgentes ou en retard</div>
@@ -155,7 +194,7 @@
 
         <div class="toolbar">
             <div class="search">
-                <span class="search-icon" aria-hidden="true">⌕</span>
+                <span class="search-icon" aria-hidden="true"><svg class="icon"><use href="#i-search"></use></svg></span>
                 <input id="searchInput" type="search" placeholder="Rechercher un nom, téléphone, type, contenu…" autocomplete="off" aria-label="Rechercher">
             </div>
             <select id="statusFilter" class="select" aria-label="Filtrer par statut">
@@ -188,20 +227,20 @@
 <div class="view-page" data-page="request-detail" hidden>
     <div class="page-header">
         <div class="page-header-title">
-            <button class="icon-btn" id="requestDetailBackBtn" aria-label="Retour" title="Retour">←</button>
+            <button class="icon-btn" id="requestDetailBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
             <div>
                 <h2 class="page-title" id="requestDetailTitle">Demande</h2>
                 <p class="page-description" id="requestDetailSubtitle"></p>
             </div>
         </div>
         <div class="settings-actions">
-            <button class="btn" id="requestDetailEditBtn">✎ Modifier</button>
-            <button class="btn" id="requestDetailArchiveBtn">▣ Archiver</button>
-            <button class="btn btn-danger" id="requestDetailDeleteBtn">Supprimer</button>
+            <button class="btn" id="requestDetailEditBtn"><svg class="icon"><use href="#i-edit"></use></svg> Modifier</button>
+            <button class="btn" id="requestDetailArchiveBtn"><svg class="icon"><use href="#i-archive"></use></svg> Archiver</button>
+            <button class="btn btn-danger" id="requestDetailDeleteBtn"><svg class="icon"><use href="#i-trash"></use></svg> Supprimer</button>
         </div>
     </div>
     <section class="panel">
-        <div class="panel-body" id="requestDetailBody"></div>
+        <div id="requestDetailBody"></div>
     </section>
 </div>
 
@@ -211,7 +250,7 @@
 <div class="view-page" data-page="request-form" hidden>
     <div class="page-header">
         <div class="page-header-title">
-            <button class="icon-btn" id="requestFormBackBtn" aria-label="Retour" title="Retour">←</button>
+            <button class="icon-btn" id="requestFormBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
             <div>
                 <h2 class="page-title" id="requestFormTitle">Nouvelle demande</h2>
             </div>
@@ -282,7 +321,7 @@
             </div>
             <div class="panel-footer">
                 <button type="button" class="btn" id="requestFormCancelBtn">Annuler</button>
-                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                <button type="submit" class="btn btn-primary"><svg class="icon"><use href="#i-check"></use></svg> Enregistrer</button>
             </div>
         </form>
     </section>
@@ -301,15 +340,15 @@
             </p>
         </div>
         <div class="settings-actions">
-            <button class="btn" id="importPeopleCsvBtn">⇪ Importer un CSV</button>
-            <button class="btn btn-primary" id="newPersonBtn">＋ Ajouter une personne</button>
+            <button class="btn" id="importPeopleCsvBtn"><svg class="icon"><use href="#i-upload"></use></svg> Importer un CSV</button>
+            <button class="btn btn-primary" id="newPersonBtn"><svg class="icon"><use href="#i-plus"></use></svg> Ajouter une personne</button>
         </div>
     </div>
 
     <section class="panel">
         <div class="toolbar people-toolbar">
             <div class="search">
-                <span class="search-icon" aria-hidden="true">⌕</span>
+                <span class="search-icon" aria-hidden="true"><svg class="icon"><use href="#i-search"></use></svg></span>
                 <input id="peopleSearchInput" type="search" placeholder="Rechercher un nom, prénom, contact…" autocomplete="off" aria-label="Rechercher une personne">
             </div>
         </div>
@@ -326,19 +365,18 @@
 <div class="view-page" data-page="person-detail" hidden>
     <div class="page-header">
         <div class="page-header-title">
-            <button class="icon-btn" id="personDetailBackBtn" aria-label="Retour" title="Retour">←</button>
+            <button class="icon-btn" id="personDetailBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
             <div>
                 <h2 class="page-title" id="personDetailTitle">Personne</h2>
-                <p class="page-description" id="personDetailSubtitle"></p>
             </div>
         </div>
         <div class="settings-actions">
-            <button class="btn" id="personEditBtn">✎ Modifier</button>
-            <button class="btn btn-danger" id="personDeleteBtn">Supprimer</button>
+            <button class="btn" id="personEditBtn"><svg class="icon"><use href="#i-edit"></use></svg> Modifier</button>
+            <button class="btn btn-danger" id="personDeleteBtn"><svg class="icon"><use href="#i-trash"></use></svg> Supprimer</button>
         </div>
     </div>
     <section class="panel">
-        <div class="panel-body" id="personDetailBody"></div>
+        <div id="personDetailBody"></div>
     </section>
 </div>
 
@@ -348,7 +386,7 @@
 <div class="view-page" data-page="person-form" hidden>
     <div class="page-header">
         <div class="page-header-title">
-            <button class="icon-btn" id="personFormBackBtn" aria-label="Retour" title="Retour">←</button>
+            <button class="icon-btn" id="personFormBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
             <div>
                 <h2 class="page-title" id="personFormTitle">Nouvelle personne</h2>
             </div>
@@ -470,7 +508,7 @@
             </div>
             <div class="panel-footer">
                 <button type="button" class="btn" id="personFormCancelBtn">Annuler</button>
-                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                <button type="submit" class="btn btn-primary"><svg class="icon"><use href="#i-check"></use></svg> Enregistrer</button>
             </div>
         </form>
     </section>
@@ -492,7 +530,7 @@
     <div class="modal">
         <div class="modal-header">
             <h2 class="modal-title" id="settingsTitle">Paramètres</h2>
-            <button class="icon-btn" data-close-modal="settingsModal" aria-label="Fermer">×</button>
+            <button class="icon-btn" data-close-modal="settingsModal" aria-label="Fermer"><svg class="icon"><use href="#i-x"></use></svg></button>
         </div>
         <div class="modal-body">
             <section class="settings-section">
@@ -517,10 +555,10 @@
                     Le stockage du navigateur n'est pas un système de sauvegarde sécurisé.
                 </p>
                 <div class="settings-actions">
-                    <button class="btn" id="settingsExportJson">↓ Export JSON</button>
-                    <button class="btn" id="settingsExportCsv">↓ Export CSV</button>
-                    <button class="btn" id="importBtn">↑ Importer</button>
-                    <button class="btn btn-danger" id="clearDataBtn">Effacer toutes les données</button>
+                    <button class="btn" id="settingsExportJson"><svg class="icon"><use href="#i-download"></use></svg> Export JSON</button>
+                    <button class="btn" id="settingsExportCsv"><svg class="icon"><use href="#i-download"></use></svg> Export CSV</button>
+                    <button class="btn" id="importBtn"><svg class="icon"><use href="#i-upload"></use></svg> Importer</button>
+                    <button class="btn btn-danger" id="clearDataBtn"><svg class="icon"><use href="#i-trash"></use></svg> Effacer toutes les données</button>
                 </div>
             </section>
             <section class="settings-section">
@@ -547,6 +585,7 @@
 
 <script src="js/db.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/icons.js"></script>
 <script src="js/csv.js"></script>
 <script src="js/state.js"></script>
 <script src="js/dashboard.js"></script>

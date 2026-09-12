@@ -74,6 +74,26 @@ function debounce(fn, delay = 200) {
 }
 
 /* ============================================================
+   FICHE (pages détail) : bloc label/valeur réutilisé par tous
+   les modules pour afficher un champ dans une section .fiche-grid
+============================================================ */
+function ficheField(label, value, full) {
+    return `
+        <div class="fiche-field${full ? " full" : ""}">
+            <dt>${escapeHTML(label)}</dt>
+            <dd>${value || "—"}</dd>
+        </div>
+    `;
+}
+
+function initials(name) {
+    const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "?";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/* ============================================================
    FICHIERS
 ============================================================ */
 function csvEscape(v) {

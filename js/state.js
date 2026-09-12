@@ -85,7 +85,7 @@ function closeSidebar() {
 function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme === "dark" ? "dark" : "light");
     state.settings.theme = theme;
-    $("#themeBtn").textContent = theme === "dark" ? "☀" : "☾";
+    $("#themeBtn").innerHTML = icon(theme === "dark" ? "sun" : "moon");
 }
 
 async function toggleTheme() {

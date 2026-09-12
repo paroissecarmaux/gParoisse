@@ -88,7 +88,7 @@ function formatDeadline(r) {
     else if (days === 1) relative = "demain";
     else if (days > 1) relative = `dans ${days} jours`;
     return {
-        text: `${overdue ? "⚠ " : ""}${formatDate(r.deadline)}${relative ? " · " + relative : ""}`,
+        text: `${overdue ? icon("alert-triangle", "icon-inline") : ""}${formatDate(r.deadline)}${relative ? " · " + relative : ""}`,
         overdue
     };
 }
@@ -169,6 +169,7 @@ function renderRequestCard(r) {
     return `
         <article class="request-card ${urgent ? "urgent" : ""} ${overdue ? "overdue" : ""}"
                  data-request-id="${escapeHTML(r.id)}" role="listitem">
+            <div class="avatar" aria-hidden="true">${escapeHTML(initials(r.name))}</div>
             <div class="request-person">
                 <div class="request-name">${escapeHTML(r.name || "Sans nom")}</div>
                 <div class="request-contact">${escapeHTML(r.contact || "Aucun contact")}</div>
@@ -178,20 +179,19 @@ function renderRequestCard(r) {
                 <div class="request-date">Demandée le ${formatDate(r.dateDemande)}</div>
             </div>
             <div>
-                <span class="badge ${statusClass(r.status)}">${escapeHTML(r.status)}</span>
-                ${urgent ? `<span class="badge urgent">Urgente</span>` : ""}
+                <div class="badge-row">
+                    <span class="badge ${statusClass(r.status)}">${escapeHTML(r.status)}</span>
+                    ${urgent ? `<span class="badge urgent">${icon("alert-triangle", "icon-inline")}Urgente</span>` : ""}
+                    ${r.archived ? `<span class="badge normal">Archivée</span>` : ""}
+                </div>
                 ${r.deadline ? `<div class="deadline ${dl.overdue ? "overdue" : ""}">${dl.text}</div>` : ""}
             </div>
-            <div>
-                ${r.archived ? `<span class="badge normal">Archivée</span>` : ""}
-            </div>
             <div class="request-actions">
-                ${canComplete ? `<button class="icon-btn" data-action="complete" title="Marquer terminé" aria-label="Terminer">✓</button>` : ""}
-                <button class="icon-btn" data-action="open" title="Ouvrir" aria-label="Ouvrir">↗</button>
-                <button class="icon-btn" data-action="edit" title="Modifier" aria-label="Modifier">✎</button>
+                ${canComplete ? `<button class="icon-btn" data-action="complete" title="Marquer terminé" aria-label="Terminer">${icon("check")}</button>` : ""}
+                <button class="icon-btn" data-action="edit" title="Modifier" aria-label="Modifier">${icon("edit")}</button>
                 ${!r.archived
-                    ? `<button class="icon-btn" data-action="archive" title="Archiver" aria-label="Archiver">▣</button>`
-                    : `<button class="icon-btn" data-action="restore" title="Restaurer" aria-label="Restaurer">↶</button>`}
+                    ? `<button class="icon-btn" data-action="archive" title="Archiver" aria-label="Archiver">${icon("archive")}</button>`
+                    : `<button class="icon-btn" data-action="restore" title="Restaurer" aria-label="Restaurer">${icon("restore")}</button>`}
             </div>
         </article>
     `;
@@ -345,73 +345,69 @@ function showRequestDetail(id) {
     const dl = formatDeadline(r);
 
     $("#requestDetailBody").innerHTML = `
-        <div class="detail-grid">
-            <div class="detail-item">
-                <div class="detail-label">Statut</div>
-                <div class="detail-value"><span class="badge ${statusClass(r.status)}">${escapeHTML(r.status)}</span></div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Priorité</div>
-                <div class="detail-value">
-                    <span class="badge ${r.priority === "Urgente" ? "urgent" : "normal"}">${escapeHTML(r.priority)}</span>
+        <div class="fiche-header">
+            <div class="fiche-avatar" aria-hidden="true">${escapeHTML(initials(r.name))}</div>
+            <div class="fiche-heading">
+                <h3 class="fiche-name">${escapeHTML(r.name || "Demande sans nom")}</h3>
+                <p class="fiche-meta">${escapeHTML(r.type)} · demandée le ${formatDate(r.dateDemande)}</p>
+                <div class="fiche-chips">
+                    <span class="badge ${statusClass(r.status)}">${escapeHTML(r.status)}</span>
+                    <span class="badge ${r.priority === "Urgente" ? "urgent" : "normal"}">${r.priority === "Urgente" ? icon("alert-triangle", "icon-inline") : ""}${escapeHTML(r.priority)}</span>
+                    ${r.archived ? `<span class="badge normal">Archivée</span>` : ""}
                 </div>
             </div>
-            <div class="detail-item">
-                <div class="detail-label">Contact</div>
-                <div class="detail-value">${escapeHTML(r.contact || "—")}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Moyen de contact</div>
-                <div class="detail-value">${escapeHTML(r.contactMethod || "—")}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Date de la demande</div>
-                <div class="detail-value">${formatDate(r.dateDemande)}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Échéance</div>
-                <div class="detail-value">
-                    ${r.deadline ? `<span class="${dl.overdue ? "deadline overdue" : "deadline"}">${dl.text}</span>` : "—"}
-                </div>
-            </div>
-            <div class="detail-item full">
-                <div class="detail-label">Demande</div>
-                <div class="detail-value">${escapeHTML(r.description || "Aucune description.")}</div>
-            </div>
-            <div class="detail-item full">
-                <div class="detail-label">Notes internes</div>
-                <div class="detail-value">${escapeHTML(r.notes || "Aucune note.")}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Créée le</div>
-                <div class="detail-value">${formatDateTime(r.createdAt)}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Modifiée le</div>
-                <div class="detail-value">${formatDateTime(r.updatedAt)}</div>
-            </div>
-            ${r.completedAt ? `
-            <div class="detail-item">
-                <div class="detail-label">Terminée le</div>
-                <div class="detail-value">${formatDateTime(r.completedAt)}</div>
-            </div>` : ""}
         </div>
-        <div class="history">
-            <div class="history-title">Historique</div>
-            ${history.length
-                ? history.map(h => `
-                    <div class="history-item">
-                        <div class="history-dot"></div>
-                        <div>
-                            <div class="history-text">${escapeHTML(h.description)}</div>
-                            <div class="history-date">${formatDateTime(h.createdAt)}</div>
-                        </div>
-                    </div>`).join("")
-                : `<div class="empty">Aucun historique.</div>`}
+
+        <div class="fiche-section">
+            <h4 class="fiche-section-title">Suivi</h4>
+            <dl class="fiche-grid">
+                ${ficheField("Date de la demande", formatDate(r.dateDemande))}
+                ${ficheField("Échéance", r.deadline ? `<span class="${dl.overdue ? "deadline overdue" : "deadline"}">${dl.text}</span>` : "")}
+            </dl>
+        </div>
+
+        <div class="fiche-section">
+            <h4 class="fiche-section-title">Contact</h4>
+            <dl class="fiche-grid">
+                ${ficheField("Contact", escapeHTML(r.contact))}
+                ${ficheField("Moyen de contact", escapeHTML(r.contactMethod))}
+            </dl>
+        </div>
+
+        <div class="fiche-section">
+            <h4 class="fiche-section-title">Contenu</h4>
+            <dl class="fiche-grid">
+                ${ficheField("Description", escapeHTML(r.description) || "Aucune description.", true)}
+                ${ficheField("Notes internes", escapeHTML(r.notes) || "Aucune note.", true)}
+            </dl>
+        </div>
+
+        <div class="fiche-section">
+            <h4 class="fiche-section-title">Journal</h4>
+            <dl class="fiche-grid">
+                ${ficheField("Créée le", formatDateTime(r.createdAt))}
+                ${ficheField("Modifiée le", formatDateTime(r.updatedAt))}
+                ${r.completedAt ? ficheField("Terminée le", formatDateTime(r.completedAt)) : ""}
+            </dl>
+            <div class="history">
+                <h5 class="history-title">Historique</h5>
+                ${history.length
+                    ? history.map(h => `
+                        <div class="history-item">
+                            <div class="history-dot"></div>
+                            <div>
+                                <div class="history-text">${escapeHTML(h.description)}</div>
+                                <div class="history-date">${formatDateTime(h.createdAt)}</div>
+                            </div>
+                        </div>`).join("")
+                    : `<div class="empty">Aucun historique.</div>`}
+            </div>
         </div>
     `;
 
-    $("#requestDetailArchiveBtn").textContent = r.archived ? "↶ Restaurer" : "▣ Archiver";
+    $("#requestDetailArchiveBtn").innerHTML = r.archived
+        ? `${icon("restore")} Restaurer`
+        : `${icon("archive")} Archiver`;
     showPage("request-detail");
 }
 

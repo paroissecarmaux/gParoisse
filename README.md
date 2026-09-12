@@ -16,10 +16,11 @@ Aucune installation, aucun serveur, aucune dépendance à builder : `index.html`
 ## Structure du code
 
 ```
-index.html          Coquille : sidebar, pages plein écran, modale Paramètres
-css/style.css        Tous les styles
+index.html          Coquille : sprite d'icônes, sidebar, pages plein écran, modale Paramètres
+css/style.css        Tous les styles (palette, typographie, composants)
 js/db.js             Schéma Dexie (IndexedDB)
-js/utils.js          Utilitaires génériques (dates, texte, DOM, toast…)
+js/utils.js          Utilitaires génériques (dates, texte, DOM, toast, fiche…)
+js/icons.js          Aide pour référencer une icône du sprite SVG depuis le JS
 js/csv.js            Parsing CSV générique (délimiteur, dates FR, dates Excel)
 js/state.js           État partagé, navigation plein écran, thème, modale
 js/dashboard.js        Module « Demandes / Tableau de bord »
@@ -27,6 +28,15 @@ js/people.js            Module « Personnes » (+ import CSV)
 js/settings.js           Paramètres, export/import/effacement des données
 js/main.js                Initialisation, raccourcis clavier, câblage global
 ```
+
+### Identité visuelle
+
+Palette chaleureuse (papier/bordeaux) plutôt qu'un gris-bleu générique de tableau
+de bord, typographie sérif pour les titres / sans-serif pour l'interface, et un
+jeu d'icônes SVG dessinées à la main (aucune police d'icônes ni CDN, tout
+fonctionne hors-ligne). Les pages de détail (« fiches ») affichent
+systématiquement l'intégralité des champs du formulaire correspondant — aucune
+donnée saisie ne reste invisible en dehors du formulaire d'édition.
 
 Chaque module métier (demandes, personnes, et les suivants à venir) est autonome :
 une page liste, une page détail et une page formulaire en plein écran (pas de

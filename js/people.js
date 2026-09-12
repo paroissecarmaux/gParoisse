@@ -18,7 +18,7 @@ function personBirthLine(p) {
 }
 
 function sacramentBadge(label, done) {
-    return `<span class="badge ${done ? "done" : "normal"}">${label} ${done ? "✓" : "✗"}</span>`;
+    return `<span class="badge ${done ? "done" : "normal"}">${icon(done ? "check-circle" : "x-circle", "icon-inline")}${label}</span>`;
 }
 
 /* ============================================================
@@ -40,6 +40,7 @@ function filteredPeople() {
 function renderPersonCard(p) {
     return `
         <article class="person-card" data-person-id="${escapeHTML(p.id)}" role="listitem">
+            <div class="avatar" aria-hidden="true">${escapeHTML(initials(`${p.prenom} ${p.nom}`))}</div>
             <div class="request-person">
                 <div class="request-name">${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}</div>
                 <div class="request-contact">${escapeHTML([p.telephone, p.email].filter(Boolean).join(" · ") || "Aucun contact")}</div>
@@ -48,15 +49,14 @@ function renderPersonCard(p) {
                 <div class="request-type">${personBirthLine(p)}</div>
                 <div class="request-date">${p.lieuNaissance ? "Né(e) à " + escapeHTML(p.lieuNaissance) : ""}</div>
             </div>
-            <div>
+            <div class="badge-row">
                 ${sacramentBadge("Baptême", Boolean(p.dateBapteme))}
                 ${sacramentBadge("Confirmation", Boolean(p.dateConfirmation))}
                 ${sacramentBadge("Mariage", Boolean(p.dateMariage))}
             </div>
             <div class="request-actions">
-                <button class="icon-btn" data-action="open" title="Ouvrir" aria-label="Ouvrir">↗</button>
-                <button class="icon-btn" data-action="edit" title="Modifier" aria-label="Modifier">✎</button>
-                <button class="icon-btn" data-action="delete" title="Supprimer" aria-label="Supprimer">🗑</button>
+                <button class="icon-btn" data-action="edit" title="Modifier" aria-label="Modifier">${icon("edit")}</button>
+                <button class="icon-btn" data-action="delete" title="Supprimer" aria-label="Supprimer">${icon("trash")}</button>
             </div>
         </article>
     `;
@@ -181,66 +181,77 @@ function showPersonDetail(id) {
     state.selectedPersonId = id;
 
     $("#personDetailTitle").textContent = `${p.prenom} ${p.nom}`.trim() || "Personne";
-    $("#personDetailSubtitle").textContent = personBirthLine(p);
 
     $("#personDetailBody").innerHTML = `
-        <div class="detail-grid">
-            <div class="detail-item">
-                <div class="detail-label">Père</div>
-                <div class="detail-value">${escapeHTML(p.pere || "—")}</div>
+        <div class="fiche-header">
+            <div class="fiche-avatar" aria-hidden="true">${escapeHTML(initials(`${p.prenom} ${p.nom}`))}</div>
+            <div class="fiche-heading">
+                <h3 class="fiche-name">${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}</h3>
+                <p class="fiche-meta">${personBirthLine(p)}${p.lieuNaissance ? " · né(e) à " + escapeHTML(p.lieuNaissance) : ""}</p>
+                <div class="fiche-chips">
+                    ${sacramentBadge("Baptême", Boolean(p.dateBapteme))}
+                    ${sacramentBadge("Confirmation", Boolean(p.dateConfirmation))}
+                    ${sacramentBadge("Mariage", Boolean(p.dateMariage))}
+                </div>
             </div>
-            <div class="detail-item">
-                <div class="detail-label">Mère</div>
-                <div class="detail-value">${escapeHTML(p.mere || "—")}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Téléphone</div>
-                <div class="detail-value">${escapeHTML(p.telephone || "—")}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">E-mail</div>
-                <div class="detail-value">${escapeHTML(p.email || "—")}</div>
-            </div>
-            <div class="detail-item full">
-                <div class="detail-label">Adresse</div>
-                <div class="detail-value">${escapeHTML(p.adresse || "—")}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Baptême</div>
-                <div class="detail-value">${p.dateBapteme ? formatDate(p.dateBapteme) + (p.lieuBapteme ? " · " + escapeHTML(p.lieuBapteme) : "") : "—"}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Registre / diocèse</div>
-                <div class="detail-value">${escapeHTML([p.registre, p.diocese].filter(Boolean).join(" · ") || "—")}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Année / n° baptême</div>
-                <div class="detail-value">${escapeHTML([p.anneeBapteme, p.numeroBapteme].filter(Boolean).join(" · ") || "—")}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Parrain / marraine</div>
-                <div class="detail-value">${escapeHTML([p.parrain, p.marraine].filter(Boolean).join(" · ") || "—")}</div>
-            </div>
-            <div class="detail-item full">
-                <div class="detail-label">Témoin</div>
-                <div class="detail-value">${escapeHTML(p.temoin || "—")}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Confirmation</div>
-                <div class="detail-value">${p.dateConfirmation ? formatDate(p.dateConfirmation) + (p.lieuConfirmation ? " · " + escapeHTML(p.lieuConfirmation) : "") : "—"}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Mariage</div>
-                <div class="detail-value">${p.dateMariage ? formatDate(p.dateMariage) + (p.lieuMariage ? " · " + escapeHTML(p.lieuMariage) : "") : "—"}</div>
-            </div>
-            <div class="detail-item">
-                <div class="detail-label">Conjoint(e)</div>
-                <div class="detail-value">${escapeHTML(p.conjoint || "—")}</div>
-            </div>
-            <div class="detail-item full">
-                <div class="detail-label">Observations</div>
-                <div class="detail-value">${escapeHTML(p.notes || "Aucune observation.")}</div>
-            </div>
+        </div>
+
+        <div class="fiche-section">
+            <h4 class="fiche-section-title">Identité</h4>
+            <dl class="fiche-grid">
+                ${ficheField("Date de naissance", formatDate(p.dateNaissance))}
+                ${ficheField("Lieu de naissance", escapeHTML(p.lieuNaissance))}
+                ${ficheField("Père", escapeHTML(p.pere))}
+                ${ficheField("Mère", escapeHTML(p.mere))}
+            </dl>
+        </div>
+
+        <div class="fiche-section">
+            <h4 class="fiche-section-title">Contact</h4>
+            <dl class="fiche-grid">
+                ${ficheField("Téléphone", escapeHTML(p.telephone))}
+                ${ficheField("E-mail", escapeHTML(p.email))}
+                ${ficheField("Adresse", escapeHTML(p.adresse), true)}
+            </dl>
+        </div>
+
+        <div class="fiche-section">
+            <h4 class="fiche-section-title">Baptême</h4>
+            <dl class="fiche-grid">
+                ${ficheField("Registre", escapeHTML(p.registre))}
+                ${ficheField("Église / lieu de baptême", escapeHTML(p.lieuBapteme))}
+                ${ficheField("Diocèse", escapeHTML(p.diocese))}
+                ${ficheField("Année", escapeHTML(p.anneeBapteme))}
+                ${ficheField("N° baptême", escapeHTML(p.numeroBapteme))}
+                ${ficheField("Date de baptême", formatDate(p.dateBapteme))}
+                ${ficheField("Parrain", escapeHTML(p.parrain))}
+                ${ficheField("Marraine", escapeHTML(p.marraine))}
+                ${ficheField("Témoin", escapeHTML(p.temoin), true)}
+            </dl>
+        </div>
+
+        <div class="fiche-section">
+            <h4 class="fiche-section-title">Confirmation</h4>
+            <dl class="fiche-grid">
+                ${ficheField("Date de confirmation", formatDate(p.dateConfirmation))}
+                ${ficheField("Lieu de confirmation", escapeHTML(p.lieuConfirmation))}
+            </dl>
+        </div>
+
+        <div class="fiche-section">
+            <h4 class="fiche-section-title">Mariage</h4>
+            <dl class="fiche-grid">
+                ${ficheField("Date de mariage", formatDate(p.dateMariage))}
+                ${ficheField("Lieu de mariage", escapeHTML(p.lieuMariage))}
+                ${ficheField("Conjoint(e)", escapeHTML(p.conjoint), true)}
+            </dl>
+        </div>
+
+        <div class="fiche-section">
+            <h4 class="fiche-section-title">Observations</h4>
+            <dl class="fiche-grid">
+                ${ficheField("Notes", escapeHTML(p.notes) || "Aucune observation.", true)}
+            </dl>
         </div>
     `;
 
