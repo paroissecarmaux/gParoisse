@@ -469,31 +469,42 @@ async function importFile(file) {
 
         const summary = DATA_MODULES.map(m => `${imported[m.key].length} ${m.label}`).join(", ");
 
-        if (state.importMode === "replace") {
-            if (!window.confirm(`Remplacer toutes les données actuelles par ${summary} ?`)) return;
-            for (const m of DATA_MODULES) await m.table().clear();
-            await HistoryRepository.clear();
-        }
+        if (state.importMode === "replace" && !window.confirm(`Remplacer toutes les données actuelles par ${summary} ?`)) return;
 
-        // Écritures groupées (bulkPut) plutôt qu'un put() par élément, et
-        // recherche des doublons via Set (O(1)) plutôt que .some() (O(n))
-        // dans la boucle : indispensable pour des sauvegardes de plusieurs
-        // milliers d'enregistrements.
-        if (state.importMode === "merge") {
-            DATA_MODULES.forEach(m => {
-                const existingIds = new Set(allRecordsFor(m).map(e => e.id));
-                imported[m.key].forEach(item => { if (existingIds.has(item.id)) item.id = uid(); });
-            });
-        }
+        // V6.6 : tout l'import (vidage éventuel + écritures) regroupé dans
+        // une seule transaction Dexie plutôt qu'une suite d'opérations
+        // indépendantes — si l'écriture d'une table échoue en cours de
+        // route (ex. la 4ᵉ table sur 7), Dexie annule tout (rollback) au
+        // lieu de laisser la base à moitié importée (certaines tables déjà
+        // à jour, d'autres non, un état qu'un simple try/catch ne peut pas
+        // éviter puisque les opérations précédentes ont déjà été validées).
+        await db.transaction("rw", [...DATA_MODULES.map(m => db[m.key]), db.history], async () => {
+            if (state.importMode === "replace") {
+                for (const m of DATA_MODULES) await m.table().clear();
+                await HistoryRepository.clear();
+            }
 
-        for (const m of DATA_MODULES) {
-            if (imported[m.key].length) await m.table().bulkPut(imported[m.key]);
-        }
-        // L'historique n'a pas besoin de la même déduplication d'id que les
-        // modules ci-dessus : ses id sont des UUID aléatoires (uid()), une
-        // collision ne peut réalistement survenir qu'en réimportant la même
-        // sauvegarde deux fois — bulkPut la réécrit alors à l'identique.
-        if (importedHistory.length) await HistoryRepository.bulkPut(importedHistory);
+            // Écritures groupées (bulkPut) plutôt qu'un put() par élément, et
+            // recherche des doublons via Set (O(1)) plutôt que .some() (O(n))
+            // dans la boucle : indispensable pour des sauvegardes de plusieurs
+            // milliers d'enregistrements.
+            if (state.importMode === "merge") {
+                DATA_MODULES.forEach(m => {
+                    const existingIds = new Set(allRecordsFor(m).map(e => e.id));
+                    imported[m.key].forEach(item => { if (existingIds.has(item.id)) item.id = uid(); });
+                });
+            }
+
+            for (const m of DATA_MODULES) {
+                if (imported[m.key].length) await m.table().bulkPut(imported[m.key]);
+            }
+            // L'historique n'a pas besoin de la même déduplication d'id que
+            // les modules ci-dessus : ses id sont des UUID aléatoires
+            // (uid()), une collision ne peut réalistement survenir qu'en
+            // réimportant la même sauvegarde deux fois — bulkPut la réécrit
+            // alors à l'identique.
+            if (importedHistory.length) await HistoryRepository.bulkPut(importedHistory);
+        });
 
         state.peoplePage = 1;
         state.requestsPage = 1;
@@ -515,8 +526,13 @@ async function clearDatabase() {
         toast("Effacement annulé.");
         return;
     }
-    await HistoryRepository.clear();
-    for (const m of DATA_MODULES) await m.table().clear();
+    // V6.6 : une seule transaction plutôt que 7 clear() indépendants — si
+    // l'un échoue en cours de route, aucun n'est appliqué (voir importFile()
+    // ci-dessus pour le même raisonnement).
+    await db.transaction("rw", [...DATA_MODULES.map(m => db[m.key]), db.history], async () => {
+        await HistoryRepository.clear();
+        for (const m of DATA_MODULES) await m.table().clear();
+    });
     for (const m of DATA_MODULES) await m.load();
     state.history = await HistoryRepository.list();
     DATA_MODULES.forEach(m => m.render());
