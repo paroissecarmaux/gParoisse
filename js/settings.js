@@ -130,7 +130,7 @@ const DATA_MODULES = [
             { key: "clocherId", header: "ID clocher" },
             { key: "createdAt", header: "Créée le" },
             { key: "updatedAt", header: "Modifiée le" },
-            { key: "deletedAt", header: "Supprimée le (corbeille)" }
+            { key: "deletedAt", header: "Supprimée le (corbeille)", type: "date" }
         ]
     },
     {
@@ -178,7 +178,7 @@ const DATA_MODULES = [
             { key: "role", header: "Rôle" },
             { key: "groupe", header: "Groupe" },
             { key: "notes", header: "Notes" },
-            { key: "deletedAt", header: "Supprimée le (corbeille)" }
+            { key: "deletedAt", header: "Supprimée le (corbeille)", type: "date" }
         ]
     },
     {
@@ -205,7 +205,7 @@ const DATA_MODULES = [
             { key: "clocherId", header: "ID clocher" },
             { key: "notes", header: "Notes" },
             { key: "active", header: "Active", type: "bool" },
-            { key: "deletedAt", header: "Supprimée le (corbeille)" }
+            { key: "deletedAt", header: "Supprimée le (corbeille)", type: "date" }
         ]
     },
     {
@@ -230,7 +230,7 @@ const DATA_MODULES = [
             { key: "fetePatronale", header: "Fête patronale" },
             { key: "notes", header: "Notes" },
             { key: "active", header: "Active", type: "bool" },
-            { key: "deletedAt", header: "Supprimé le (corbeille)" }
+            { key: "deletedAt", header: "Supprimé le (corbeille)", type: "date" }
         ]
     },
     {
@@ -259,7 +259,7 @@ const DATA_MODULES = [
             { key: "dateFin", header: "Fin", type: "date" },
             { key: "notes", header: "Notes" },
             { key: "active", header: "Active", type: "bool" },
-            { key: "deletedAt", header: "Supprimé(e) le (corbeille)" }
+            { key: "deletedAt", header: "Supprimé(e) le (corbeille)", type: "date" }
         ]
     },
     {
@@ -288,7 +288,7 @@ const DATA_MODULES = [
             { key: "clocherId", header: "ID clocher" },
             { key: "personnelId", header: "ID célébrant" },
             { key: "notes", header: "Notes" },
-            { key: "deletedAt", header: "Supprimée le (corbeille)" }
+            { key: "deletedAt", header: "Supprimée le (corbeille)", type: "date" }
         ]
     }
 ];
