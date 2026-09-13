@@ -42,6 +42,8 @@ Risque : moyen (nouvelle version Dexie, nouveaux champs) — additif, réversibl
 
 ## V6.3 — Sauvegarde (renforcement, priorité très élevée selon la mission)
 
+**Statut : ✅ COMPLET** (implémenté le 2026-09-13). Aucun test manuel en navigateur n'a été effectué (pas d'environnement navigateur disponible) — à valider manuellement avant mise en production : export d'une sauvegarde, réimport de cette même sauvegarde, réimport d'une ancienne sauvegarde plate (V6.2.c et avant), réimport d'un JSON quelconque sans rapport (doit être rejeté avec un message clair).
+
 - Format de sauvegarde structuré explicite : `{ format: "gparoisse-backup", formatVersion: 1, appVersion, databaseVersion: db.verno, createdAt, data: { requests: [...], ... } }` — remplace la structure plate actuelle (`{app, version, exportedAt, ...}` avec les tables au premier niveau) par un objet dédié `data`, plus facile à valider.
 - Validation stricte à l'import : vérifier `format === "gparoisse-backup"`, `formatVersion` connu, présence de `data`, et rejeter (avec message clair) tout fichier qui ne correspond pas — au lieu d'accepter silencieusement n'importe quel JSON qui contient par hasard un champ `requests`.
 - Garder la rétrocompatibilité de lecture avec l'ancien format plat (déjà partiellement fait pour le très ancien format « tableau brut ») : `importFile()` détecte le format et s'adapte, jamais l'inverse.
