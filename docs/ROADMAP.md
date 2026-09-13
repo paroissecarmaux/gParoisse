@@ -70,6 +70,18 @@ Risque : faible à moyen — le format change, mais la conversion est un simple 
 - Ajouter les premiers tests (voir §I de l'audit pour la liste des fonctions pures déjà testables sans changement d'architecture) : `utils.js`, `csv.js`, logique de dates récurrentes, `normalizeRequest`. Choix d'outil à discuter (le projet n'a aujourd'hui aucune dépendance de build ; un test runner sans bundler, ex. exécuté via Node directement sur les fonctions pures exportées, resterait cohérent avec l'esprit « zéro build »).
 - Documentation : `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/BACKUP.md`, `docs/SECURITY.md`, `docs/RGPD.md`, `docs/TESTS.md`, `docs/CHANGELOG.md` — rédigés au fil de l'implémentation de chaque phase ci-dessus, pas d'un coup.
 
+## V6.6 — Consolidation et durcissement
+
+**Statut : ✅ COMPLET** (implémenté le 2026-09-13, voir `docs/V6.6-AUDIT.md` et `docs/V6.6-IMPLEMENTATION.md`). Audit complet du dépôt puis correction directe des points 🔴/🟠 trouvés — pas de nouvelle fonctionnalité au sens produit, uniquement de la fiabilité/robustesse :
+
+- Écriture métier + historique désormais atomiques (transaction Dexie commune, `withHistoryTx()`) sur les 30 call sites des 6 modules — l'historique ne peut plus diverger silencieusement de l'état réel en cas d'échec partiel.
+- Import JSON et effacement complet des données rendus atomiques (une seule transaction Dexie plutôt qu'une suite d'opérations indépendantes).
+- Verrous anti-double-clic/double-soumission (`withSubmitLock`/`withActionLock`) et avertissement avant d'abandonner un formulaire modifié sans enregistrer.
+- Nouveau diagnostic d'intégrité des données (Paramètres), à la demande : liens orphelins, valeurs hors vocabulaire, dates invalides, doublons probables — un rapport, jamais une correction automatique.
+- Correction d'un risque de mélange de cache entre deux versions de l'app dans le service worker.
+- 6 fonctions sans aucune gestion d'erreur, corrigées. 78 tests (67 → 78), README à jour.
+- Comme pour les phases précédentes, aucun test manuel en navigateur n'a été effectué (pas d'environnement navigateur disponible) — à valider manuellement avant mise en production (voir `docs/V6.6-IMPLEMENTATION.md` §7).
+
 ## TypeScript — position (pas de migration automatique)
 
 Étudié comme demandé, sans décision de migration :

@@ -2,6 +2,18 @@
 
 Suit la numérotation de `docs/ROADMAP.md`, pas de dates de release — chaque phase peut s'étaler sur plusieurs sessions. Rédigé à partir de l'historique git réel et des documents d'implémentation (`docs/REVIEW-V6.0-V6.1.md`, `docs/V6.2-C-IMPLEMENTATION.md`), pas d'une mémoire reconstruite.
 
+## V6.6 — Consolidation et durcissement
+
+- Audit complet du dépôt (`docs/V6.6-AUDIT.md`), puis correction directe des points 🔴/🟠 trouvés (`docs/V6.6-IMPLEMENTATION.md`).
+- Écriture métier + historique rendues atomiques (`withHistoryTx()`, transaction Dexie commune) sur les 30 call sites des 6 modules — l'historique ne peut plus diverger silencieusement de l'état réel en cas d'échec partiel (risque documenté sans être corrigé en V6.2.c).
+- Import JSON et effacement complet des données rendus atomiques (une transaction Dexie unique plutôt qu'une suite d'opérations indépendantes sur jusqu'à 7 tables).
+- Verrous anti-double-clic/double-soumission (`withSubmitLock`/`withActionLock`) et confirmation avant d'abandonner un formulaire modifié non enregistré.
+- Nouveau diagnostic d'intégrité des données (`js/diagnostics.js`, bouton Paramètres) : liens orphelins, valeurs hors vocabulaire, dates invalides, doublons probables — un rapport, jamais une correction automatique.
+- Correction d'un risque de mélange de cache entre deux versions de l'app dans le service worker (`caches.match` restreint à `CACHE_NAME`).
+- 6 fonctions sans aucune gestion d'erreur, corrigées ; une incohérence de journalisation (`console.error` brut) corrigée.
+- 78 tests (67 → 78) ; README et ROADMAP mis à jour.
+- V6.6 n'a nécessité aucune migration Dexie (aucun nouveau champ indexé).
+
 ## V6.5 — UX, accessibilité, tests, documentation
 
 - « Enregistrer et créer une autre » généralisé aux formulaires Annonces/Clochers/Personnel (déjà présent sur Personnes/Intentions).
