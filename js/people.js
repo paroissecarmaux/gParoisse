@@ -6,7 +6,7 @@
 const PEOPLE_PAGE_SIZE = 60;
 
 async function loadPeopleData() {
-    state.people = await db.people.orderBy("updatedAt").reverse().toArray();
+    state.people = await PeopleRepository.list();
     // Recherche/tri précalculés une seule fois ici plutôt qu'à chaque
     // rendu : décisif dès quelques milliers de personnes.
     state.people.forEach(p => {
@@ -258,7 +258,7 @@ async function savePerson(e) {
     };
 
     try {
-        await db.people.put(person);
+        await PeopleRepository.put(person);
         await loadPeopleData();
         renderPeopleList();
         renderPeopleSummary();
@@ -267,7 +267,7 @@ async function savePerson(e) {
         if (e.submitter?.dataset.action === "save-and-new") showPersonForm(null);
         else showPersonDetail(person.id);
     } catch (err) {
-        console.error(err);
+        Logger.error("people.savePerson", err);
         toast("Impossible d'enregistrer cette personne.", "error");
     }
 }
@@ -573,7 +573,7 @@ async function deletePerson(id) {
     if (!window.confirm(`Supprimer définitivement la fiche de ${p.prenom} ${p.nom} ?\n\nCette action est irréversible.`)) return;
 
     try {
-        await db.people.delete(id);
+        await PeopleRepository.remove(id);
         await loadPeopleData();
         renderPeopleList();
         renderPeopleSummary();
@@ -581,7 +581,7 @@ async function deletePerson(id) {
         toast("Personne supprimée.", "success");
         showPage("people");
     } catch (err) {
-        console.error(err);
+        Logger.error("people.deletePerson", err);
         toast("Impossible de supprimer cette personne.", "error");
     }
 }
@@ -662,7 +662,7 @@ async function importPeopleCSV(file) {
         // Une seule transaction groupée plutôt qu'un aller-retour IndexedDB
         // par ligne : indispensable pour des fichiers de plusieurs milliers
         // de personnes (un put() individuel par ligne serait très long).
-        if (toInsert.length) await db.people.bulkPut(toInsert);
+        if (toInsert.length) await PeopleRepository.bulkPut(toInsert);
 
         state.peoplePage = 1;
         await loadPeopleData();
@@ -671,7 +671,7 @@ async function importPeopleCSV(file) {
         renderOverview();
         toast(`${toInsert.length} personne(s) importée(s)${skipped ? ` · ${skipped} ligne(s) ignorée(s)` : ""}.`, "success");
     } catch (err) {
-        console.error(err);
+        Logger.error("people.importPeopleCSV", err);
         toast("Import CSV impossible : " + err.message, "error");
     }
 }
