@@ -169,7 +169,8 @@ async function saveClocher(e) {
         renderClochersList();
         renderClochersSummary();
         toast(existing ? "Clocher modifié." : "Clocher ajouté.", "success");
-        showClocherDetail(clocher.id);
+        if (e.submitter?.dataset.action === "save-and-new") showClocherForm(null);
+        else showClocherDetail(clocher.id);
     } catch (err) {
         Logger.error("clochers.saveClocher", err);
         toast("Impossible d'enregistrer ce clocher.", "error");

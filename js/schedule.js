@@ -195,7 +195,8 @@ async function saveSchedule(e) {
         renderOverview();
         renderAgenda();
         toast(existing ? "Annonce modifiée." : "Annonce ajoutée.", "success");
-        showScheduleDetail(entry.id);
+        if (e.submitter?.dataset.action === "save-and-new") showScheduleForm(null);
+        else showScheduleDetail(entry.id);
     } catch (err) {
         Logger.error("schedule.saveSchedule", err);
         toast("Impossible d'enregistrer cette annonce.", "error");

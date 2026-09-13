@@ -186,7 +186,8 @@ async function savePersonnel(e) {
         renderPersonnelList();
         renderPersonnelSummary();
         toast(existing ? "Fiche modifiée." : "Fiche ajoutée.", "success");
-        showPersonnelDetail(personnel.id);
+        if (e.submitter?.dataset.action === "save-and-new") showPersonnelForm(null);
+        else showPersonnelDetail(personnel.id);
     } catch (err) {
         Logger.error("personnel.savePersonnel", err);
         toast("Impossible d'enregistrer cette fiche.", "error");
