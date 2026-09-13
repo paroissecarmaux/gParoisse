@@ -8,6 +8,8 @@ Ordre de priorité global, rappelé de la mission : **fiabilité des données > 
 
 ## V6.0 — Urgence confidentialité (hors code)
 
+**Statut : 🟡 PARTIEL, par conception** (revu le 2026-09-13, voir `docs/REVIEW-V6.0-V6.1.md`). Les deux actions de code ci-dessous sont faites et déjà poussées sur `origin/main`. Les deux décisions qui vous appartiennent (dépôt privé / réécriture d'historique) restent explicitement ouvertes — ce n'est pas un défaut d'implémentation.
+
 Ne dépend d'aucun développement. À traiter en premier, avec votre validation explicite à chaque étape.
 
 - Rendre le dépôt GitHub privé (ou décider consciemment de le laisser public en connaissance de cause).
@@ -17,6 +19,8 @@ Ne dépend d'aucun développement. À traiter en premier, avec votre validation 
 
 ## V6.1 — Fondations (architecture, sans changement de comportement visible)
 
+**Statut : ✅ COMPLET** (revu et corrigé le 2026-09-13, voir `docs/REVIEW-V6.0-V6.1.md`). `ValidationError`/`NotFoundError` avaient été créées sans jamais être utilisées — corrigé pendant la revue (6 sites dans `people.js`/`settings.js`). Tout le reste était déjà conforme, vérifié par un diff exhaustif (aucune ligne modifiée en dehors des substitutions attendues) et 31 tests réels (`tests/pure-functions.test.js`) tous réussis. `settingsRepository.js` et `repositoryFactory.js` ont été ajoutés en plus de la liste ci-dessous (non prévus explicitement, mais nécessaires/justifiés — voir la revue).
+
 Objectif : rendre le code maintenable **avant** d'ajouter des fonctionnalités, sans rien changer pour l'utilisateur final.
 
 - Créer `js/repositories/` : un repository par table (`peopleRepository.js`, `requestsRepository.js`, `scheduleRepository.js`, `clochersRepository.js`, `personnelRepository.js`, `intentionsRepository.js`, `historyRepository.js`), chacun exposant `list()`, `get(id)`, `put(record)`, `remove(id)`, `bulkPut(records)` — de simples enveloppes autour de `db.<table>` pour commencer (pas de logique métier déplacée dans un premier temps, pour limiter le risque de régression).
@@ -25,7 +29,7 @@ Objectif : rendre le code maintenable **avant** d'ajouter des fonctionnalités, 
 - Créer `js/core/logger.js` : wrapper autour de `console.error`/`console.warn` qui **ne loggue jamais un champ personnel en clair** (nom, téléphone, email) — seulement des identifiants et des noms de champ. Remplacer les `console.error(err)` existants (`requests.js`, `people.js`, `schedule.js`, `clochers.js`, `personnel.js`, `intentions.js`, `settings.js`) par ce wrapper.
 - **Ne pas** créer `js/core/events.js`/`js/services/` tant qu'aucun besoin concret ne les justifie (cf. règle « ne pas créer d'abstraction inutile ») — à réévaluer après V6.1.
 
-Risque : faible (refactor mécanique, testable manuellement page par page). Ne touche pas au schéma Dexie.
+Risque : faible (refactor mécanique, testable manuellement page par page). Ne touche pas au schéma Dexie (vérifié : diff vide sur `js/db.js`).
 
 ## V6.2 — Données et intégrité
 
