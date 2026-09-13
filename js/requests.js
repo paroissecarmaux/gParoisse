@@ -14,7 +14,8 @@ function requestIsEvent(r) {
 }
 
 async function loadRequestsData() {
-    state.requests = await RequestsRepository.list();
+    state.requests = await RequestsRepository.listActive();
+    state.requestsTrash = await RequestsRepository.listDeleted();
     state.history = await HistoryRepository.list();
 }
 
@@ -72,16 +73,6 @@ function normalizeRequest(raw) {
         updatedAt: raw.updatedAt || raw.dateModification || now,
         completedAt: raw.completedAt || null
     };
-}
-
-async function addHistory(requestId, action, description) {
-    await HistoryRepository.put({
-        id: uid(),
-        requestId,
-        action,
-        description,
-        createdAt: nowISO()
-    });
 }
 
 function isOverdue(r) {
@@ -394,7 +385,7 @@ async function saveRequest(e) {
 
     try {
         await RequestsRepository.put(request);
-        await addHistory(request.id, existing ? "update" : "create",
+        await addHistory("request", request.id, existing ? "update" : "create",
             existing ? "Demande modifiée" : "Demande créée");
         await loadRequestsData();
         renderRequestsSummary();
@@ -414,16 +405,13 @@ function showRequestDetail(id) {
     if (!r) return;
     state.selectedId = id;
 
-    const linkedPerson = r.personId ? state.people.find(p => p.id === r.personId) : null;
-    const linkedClocher = r.clocherId ? state.clochers.find(c => c.id === r.clocherId) : null;
+    const personLink = findLinked(state.people, state.peopleTrash, r.personId);
+    const clocherLink = findLinked(state.clochers, state.clochersTrash, r.clocherId);
 
     $("#requestDetailTitle").textContent = `Demandes › ${r.name || "Demande sans nom"}`;
     $("#requestDetailSubtitle").textContent = `${r.type} · ${formatDate(r.dateDemande)}`;
 
-    const history = state.history
-        .filter(h => h.requestId === id)
-        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-
+    const historyCount = relatedHistoryFor("request", id).length;
     const dl = formatDeadline(r);
 
     $("#requestDetailBody").innerHTML = `
@@ -436,26 +424,12 @@ function showRequestDetail(id) {
                     <span class="badge ${statusClass(r.status)}">${escapeHTML(r.status)}</span>
                     <span class="badge ${r.priority === "Urgente" ? "urgent" : "normal"}">${r.priority === "Urgente" ? icon("alert-triangle", "icon-inline") : ""}${escapeHTML(r.priority)}</span>
                     ${r.archived ? `<span class="badge normal">Archivée</span>` : ""}
-                    ${history.length ? `<span class="badge normal">${icon("clock", "icon-inline")}${history.length} suivi${history.length > 1 ? "s" : ""}</span>` : ""}
+                    ${historyCount ? `<span class="badge normal">${icon("clock", "icon-inline")}${historyCount} suivi${historyCount > 1 ? "s" : ""}</span>` : ""}
                 </div>
             </div>
         </div>
 
-        <div class="fiche-section">
-            <h4 class="fiche-section-title">Historique${history.length ? ` (${history.length})` : ""}</h4>
-            <div class="history">
-                ${history.length
-                    ? history.map(h => `
-                        <div class="history-item">
-                            <div class="history-dot"></div>
-                            <div>
-                                <div class="history-text">${escapeHTML(h.description)}</div>
-                                <div class="history-date">${formatDateTime(h.createdAt)}</div>
-                            </div>
-                        </div>`).join("")
-                    : `<div class="empty">Aucun historique pour l'instant : les changements de statut et actions seront journalisés ici.</div>`}
-            </div>
-        </div>
+        ${historySectionHTML("request", id)}
 
         <div class="fiche-section">
             <h4 class="fiche-section-title">Suivi</h4>
@@ -471,8 +445,8 @@ function showRequestDetail(id) {
             <dl class="fiche-grid">
                 ${ficheField("Date", formatDate(r.dateEvenement))}
                 ${ficheField("Heure", escapeHTML(r.heureEvenement))}
-                ${ficheField("Lieu", linkedClocher
-                    ? `<button type="button" class="link-btn" data-goto-clocher="${escapeHTML(linkedClocher.id)}">${escapeHTML(linkedClocher.nom)}</button>`
+                ${ficheField("Lieu", clocherLink.status !== "none"
+                    ? linkedRecordFieldHTML(clocherLink, "data-goto-clocher", c => escapeHTML(c.nom))
                     : escapeHTML(r.lieuEvenement), true)}
                 ${r.type === "Obsèques" ? ficheField("Défunt", escapeHTML(r.defunt), true) : ""}
             </dl>
@@ -483,9 +457,9 @@ function showRequestDetail(id) {
             <dl class="fiche-grid">
                 ${ficheField("Contact", escapeHTML(r.contact))}
                 ${ficheField("Moyen de contact", escapeHTML(r.contactMethod))}
-                ${ficheField("Personne liée", linkedPerson
-                    ? `<button type="button" class="link-btn" data-goto-person="${escapeHTML(linkedPerson.id)}">${escapeHTML(linkedPerson.prenom)} ${escapeHTML(linkedPerson.nom)}</button>`
-                    : (r.personId ? "Personne introuvable (supprimée)" : ""), true)}
+                ${ficheField("Personne liée", personLink.status !== "none"
+                    ? linkedRecordFieldHTML(personLink, "data-goto-person", p => `${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}`)
+                    : "", true)}
             </dl>
         </div>
 
@@ -523,7 +497,7 @@ async function toggleArchive(id) {
     r.archived = archive;
     r.updatedAt = nowISO();
     await RequestsRepository.put(r);
-    await addHistory(id, archive ? "archive" : "restore", archive ? "Demande archivée" : "Demande restaurée");
+    await addHistory("request", id, archive ? "archive" : "restore", archive ? "Demande archivée" : "Demande restaurée");
     await loadRequestsData();
     renderRequestsSummary();
     renderRequests();
@@ -541,7 +515,7 @@ async function markComplete(id) {
     r.completedAt = nowISO();
     r.updatedAt = nowISO();
     await RequestsRepository.put(r);
-    await addHistory(id, "complete", "Marquée comme terminée");
+    await addHistory("request", id, "complete", "Marquée comme terminée");
     await loadRequestsData();
     renderRequestsSummary();
     renderRequests();
@@ -549,24 +523,79 @@ async function markComplete(id) {
     toast("Demande terminée.", "success");
 }
 
-async function deleteRequest(id) {
+/* ============================================================
+   CORBEILLE (V6.2.c)
+   trashRequest() ne supprime jamais réellement l'enregistrement :
+   il passe deletedAt, ce qui le fait disparaître des listes/
+   recherches/KPI (centralisé dans loadRequestsData(), qui ne charge
+   plus que les demandes actives). purgeRequest() est la seule
+   suppression Dexie réelle, et n'est accessible que depuis la vue
+   Corbeille (js/trash.js), jamais depuis la fiche elle-même.
+============================================================ */
+async function trashRequest(id) {
     const r = state.requests.find(x => x.id === id);
     if (!r) return;
-    if (!window.confirm(`Supprimer définitivement la demande de ${r.name || "cette personne"} ?\n\nCette action est irréversible.`)) return;
+    if (!window.confirm(`Mettre à la corbeille la demande de ${r.name || "cette personne"} ?\n\nElle pourra être restaurée depuis la Corbeille.`)) return;
 
     try {
-        await RequestsRepository.remove(id);
-        await addHistory(id, "delete", "Demande supprimée définitivement");
+        r.deletedAt = nowISO();
+        r.updatedAt = nowISO();
+        await RequestsRepository.put(r);
+        await addHistory("request", id, "trash", "Demande mise à la corbeille");
         await loadRequestsData();
         renderRequestsSummary();
         renderRequests();
         renderOverview();
         renderAgenda();
-        toast("Demande supprimée.", "success");
+        toast("Demande mise à la corbeille.", "success");
         showPage("requests");
     } catch (err) {
-        Logger.error("requests.deleteRequest", err);
-        toast("Impossible de supprimer la demande.", "error");
+        Logger.error("requests.trashRequest", err);
+        toast("Impossible de mettre cette demande à la corbeille.", "error");
+    }
+}
+
+async function restoreRequest(id) {
+    const r = state.requestsTrash.find(x => x.id === id);
+    if (!r) return;
+
+    try {
+        r.deletedAt = null;
+        r.updatedAt = nowISO();
+        await RequestsRepository.put(r);
+        await addHistory("request", id, "restore", "Demande restaurée depuis la corbeille");
+        await loadRequestsData();
+        renderRequestsSummary();
+        renderRequests();
+        renderOverview();
+        renderAgenda();
+        toast("Demande restaurée.", "success");
+    } catch (err) {
+        Logger.error("requests.restoreRequest", err);
+        toast("Impossible de restaurer cette demande.", "error");
+    }
+}
+
+async function purgeRequest(id) {
+    const r = state.requestsTrash.find(x => x.id === id);
+    if (!r) return;
+    if (!window.confirm(`Supprimer définitivement la demande de ${r.name || "cette personne"} ?\n\nCette action est IRRÉVERSIBLE : la fiche ne pourra plus être restaurée.`)) return;
+
+    try {
+        await RequestsRepository.remove(id);
+        // L'historique est volontairement conservé après une suppression
+        // définitive : c'est justement le rôle d'un journal d'audit de
+        // survivre à l'entité qu'il décrit (voir docs/V6.2-C-DESIGN.md).
+        await addHistory("request", id, "purge", "Demande supprimée définitivement");
+        await loadRequestsData();
+        renderRequestsSummary();
+        renderRequests();
+        renderOverview();
+        renderAgenda();
+        toast("Demande supprimée définitivement.", "success");
+    } catch (err) {
+        Logger.error("requests.purgeRequest", err);
+        toast("Impossible de supprimer définitivement cette demande.", "error");
     }
 }
 
@@ -620,7 +649,7 @@ function initRequestsEvents() {
     $("#requestDetailBackBtn").addEventListener("click", goBack);
     $("#requestDetailEditBtn").addEventListener("click", () => state.selectedId && showRequestForm(state.selectedId));
     $("#requestDetailArchiveBtn").addEventListener("click", () => state.selectedId && toggleArchive(state.selectedId));
-    $("#requestDetailDeleteBtn").addEventListener("click", () => state.selectedId && deleteRequest(state.selectedId));
+    $("#requestDetailDeleteBtn").addEventListener("click", () => state.selectedId && trashRequest(state.selectedId));
 
     $("#requestDetailBody").addEventListener("click", e => {
         const personBtn = e.target.closest("[data-goto-person]");

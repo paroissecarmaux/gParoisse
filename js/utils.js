@@ -185,6 +185,25 @@ function findLinked(activeList, trashList, id) {
     return { record: null, status: "missing" };
 }
 
+// Rendu d'un champ fiche pour un lien résolu par findLinked() : actif =
+// bouton cliquable (comme avant la corbeille) ; en corbeille = affiché
+// mais non cliquable, avec un mot clair (restaurable, pas perdu) ;
+// définitivement supprimé = message neutre. `dataAttr` est l'attribut
+// complet ("data-goto-person", …), `labelFn` reçoit le record trouvé et
+// doit renvoyer du HTML déjà échappé.
+function linkedRecordFieldHTML(link, dataAttr, labelFn) {
+    if (link.status === "active") {
+        return `<button type="button" class="link-btn" ${dataAttr}="${escapeHTML(link.record.id)}">${labelFn(link.record)}</button>`;
+    }
+    if (link.status === "trashed") {
+        return `<span class="badge cancelled">${labelFn(link.record)} — dans la corbeille</span>`;
+    }
+    if (link.status === "missing") {
+        return "Introuvable (supprimé définitivement)";
+    }
+    return "";
+}
+
 // Assemble ["3 demandes", "1 intention"] -> "3 demandes et 1 intention"
 // ou ["3 demandes", "2 annonces", "1 intention"] -> "3 demandes, 2 annonces et 1 intention".
 function joinFrenchList(items) {

@@ -5,12 +5,18 @@
 ============================================================ */
 const state = {
     requests: [],
+    requestsTrash: [],
     history: [],
     people: [],
+    peopleTrash: [],
     schedule: [],
+    scheduleTrash: [],
     clochers: [],
+    clochersTrash: [],
     personnel: [],
+    personnelTrash: [],
     intentions: [],
+    intentionsTrash: [],
     page: "overview",
     view: "active",
     quickFilter: null,
@@ -73,6 +79,7 @@ const PAGE_SECTION = {
     "intention-detail": "intentions",
     "intention-form": "intentions",
     "agenda": "agenda",
+    "trash": "trash",
     "settings": "settings"
 };
 
