@@ -304,6 +304,7 @@ function showRequestForm(id) {
     fillRequestForm(existing || createDefaultRequest());
     $("#requestFormTitle").textContent = existing ? "Modifier la demande" : "Nouvelle demande";
     $("#deadlineError").hidden = true;
+    $("#deadline").setAttribute("aria-invalid", "false");
     showPage("request-form");
     setTimeout(() => $("#name").focus(), 50);
 }
@@ -323,10 +324,12 @@ async function saveRequest(e) {
     if (deadline && dateDemande && deadline < dateDemande) {
         errorEl.textContent = "L'échéance ne peut pas être antérieure à la date de la demande.";
         errorEl.hidden = false;
+        $("#deadline").setAttribute("aria-invalid", "true");
         $("#deadline").focus();
         return;
     }
     errorEl.hidden = true;
+    $("#deadline").setAttribute("aria-invalid", "false");
 
     const id = $("#requestId").value.trim();
     const existing = state.requests.find(r => r.id === id);

@@ -470,8 +470,8 @@
                     <div class="form-section-title">Échéance</div>
                     <div class="field">
                         <label for="deadline">Échéance administrative</label>
-                        <input id="deadline" name="deadline" type="date">
-                        <div class="field-help">Permet de repérer automatiquement les retards.</div>
+                        <input id="deadline" name="deadline" type="date" aria-describedby="deadlineHelp deadlineError">
+                        <div class="field-help" id="deadlineHelp">Permet de repérer automatiquement les retards.</div>
                         <div class="field-error" id="deadlineError" hidden></div>
                     </div>
 

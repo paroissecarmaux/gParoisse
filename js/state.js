@@ -96,6 +96,21 @@ function showPage(page) {
 
     closeSidebar();
     window.scrollTo(0, 0);
+    focusPageTitle(page);
+}
+
+// Accessibilité (V6.5) : déplace le focus clavier sur le titre de la
+// page affichée après chaque navigation, plutôt que de le laisser sur
+// le bouton cliqué (souvent absent ou hors contexte sur la nouvelle
+// page) — repère utile en navigation clavier ou lecteur d'écran.
+// Générique : toutes les pages partagent la classe .page-title (h2),
+// donc aucun mapping par page à maintenir. `tabindex="-1"` rend le
+// titre focusable par script sans l'ajouter à l'ordre de tabulation.
+function focusPageTitle(page) {
+    const title = $(`.view-page[data-page="${page}"] .page-title`);
+    if (!title) return;
+    if (!title.hasAttribute("tabindex")) title.setAttribute("tabindex", "-1");
+    title.focus({ preventScroll: true });
 }
 
 function pageBackTarget(page) {
