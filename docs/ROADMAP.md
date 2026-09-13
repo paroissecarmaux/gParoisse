@@ -53,11 +53,15 @@ Risque : faible à moyen — le format change, mais la conversion est un simple 
 
 ## V6.4 — Workflows paroissiaux (structure générique, pas de workflow figé)
 
+**Statut : ⏸️ NON IMPLÉMENTÉ — arrêté à la demande explicite (2026-09-13).** La portée ci-dessous ne précise pas comment l'utilisateur renseignerait `etapes` depuis l'UI (affichage seul vs. éditeur générique) ; posé comme question avant de commencer, l'utilisateur a choisi de ne pas trancher maintenant et de passer directement à V6.5. Cette section reste donc la portée envisagée, pas un travail commencé.
+
 - Ajouter un champ générique optionnel `etapes: [{cle, label, fait: bool, date}]` sur `requests` (nouvelle version Dexie additive), initialement vide/absent pour les demandes existantes. Une demande **peut** avoir des étapes configurables (baptême, mariage…) sans que cela soit obligatoire — évite d'imposer un workflow rigide non demandé par un vrai besoin observé.
 - Affichage : si `etapes` est renseigné, la fiche Demande affiche une petite frise à cocher ; sinon, comportement identique à aujourd'hui. Zéro régression pour les demandes qui n'utilisent pas cette fonctionnalité.
 - Ne pas coder de workflow spécifique par type de cérémonie tant qu'un besoin réel et précis n'a pas été exprimé (conforme à la consigne de la mission).
 
 ## V6.5 — UX, accessibilité, tests, documentation
+
+**Statut : ✅ COMPLET** (implémenté le 2026-09-13). Comme pour les phases précédentes, aucun test manuel en navigateur n'a été effectué (pas d'environnement navigateur disponible) — à valider manuellement : navigation clavier (focus sur le titre de page), lecteur d'écran sur le champ Échéance, recherche globale sur une annonce, formulaires Annonces/Clochers/Personnel avec « Enregistrer et créer une autre ».
 
 - Généraliser « Enregistrer et créer une autre » aux formulaires Annonces/Clochers/Personnel (actuellement seulement Personnes/Intentions).
 - Focus programmatique sur le titre de page après `showPage()` (`tabindex="-1"` + `.focus()`) pour l'accessibilité clavier/lecteur d'écran.
