@@ -9,7 +9,7 @@
    (lieu) plutôt que de ressaisir ces informations en texte libre.
 ============================================================ */
 async function loadIntentionsData() {
-    state.intentions = await db.intentions.orderBy("dateDebut").toArray();
+    state.intentions = await IntentionsRepository.list();
 }
 
 function renderIntentionFormOptions() {
@@ -210,7 +210,7 @@ async function saveIntention(e) {
     };
 
     try {
-        await db.intentions.put(intention);
+        await IntentionsRepository.put(intention);
         await loadIntentionsData();
         renderIntentionsList();
         renderIntentionsSummary();
@@ -220,7 +220,7 @@ async function saveIntention(e) {
         if (e.submitter?.dataset.action === "save-and-new") showIntentionForm(null);
         else showIntentionDetail(intention.id);
     } catch (err) {
-        console.error(err);
+        Logger.error("intentions.saveIntention", err);
         toast("Impossible d'enregistrer cette intention.", "error");
     }
 }
@@ -290,7 +290,7 @@ async function toggleIntentionStatus(id) {
     if (!i) return;
     i.statut = i.statut === "Célébrée" ? "À célébrer" : "Célébrée";
     i.updatedAt = nowISO();
-    await db.intentions.put(i);
+    await IntentionsRepository.put(i);
     await loadIntentionsData();
     renderIntentionsList();
     renderIntentionsSummary();
@@ -306,7 +306,7 @@ async function deleteIntention(id) {
     if (!window.confirm(`Supprimer définitivement l'intention « ${i.intitule || i.type} » ?\n\nCette action est irréversible.`)) return;
 
     try {
-        await db.intentions.delete(id);
+        await IntentionsRepository.remove(id);
         await loadIntentionsData();
         renderIntentionsList();
         renderIntentionsSummary();
@@ -315,7 +315,7 @@ async function deleteIntention(id) {
         toast("Intention supprimée.", "success");
         showPage("intentions");
     } catch (err) {
-        console.error(err);
+        Logger.error("intentions.deleteIntention", err);
         toast("Impossible de supprimer cette intention.", "error");
     }
 }
