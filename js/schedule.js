@@ -186,21 +186,25 @@ async function saveSchedule(e) {
         updatedAt: now
     };
 
-    try {
-        await ScheduleRepository.put(entry);
-        await addHistory("schedule", entry.id, existing ? "update" : "create", existing ? "Annonce modifiée" : "Annonce créée");
-        await loadScheduleData();
-        renderScheduleList();
-        renderScheduleSummary();
-        renderOverview();
-        renderAgenda();
-        toast(existing ? "Annonce modifiée." : "Annonce ajoutée.", "success");
-        if (e.submitter?.dataset.action === "save-and-new") showScheduleForm(null);
-        else showScheduleDetail(entry.id);
-    } catch (err) {
-        Logger.error("schedule.saveSchedule", err);
-        toast("Impossible d'enregistrer cette annonce.", "error");
-    }
+    await withSubmitLock(e.target, async () => {
+        try {
+            await withHistoryTx([db.schedule], async () => {
+                await ScheduleRepository.put(entry);
+                await addHistory("schedule", entry.id, existing ? "update" : "create", existing ? "Annonce modifiée" : "Annonce créée");
+            });
+            await loadScheduleData();
+            renderScheduleList();
+            renderScheduleSummary();
+            renderOverview();
+            renderAgenda();
+            toast(existing ? "Annonce modifiée." : "Annonce ajoutée.", "success");
+            if (e.submitter?.dataset.action === "save-and-new") showScheduleForm(null);
+            else showScheduleDetail(entry.id);
+        } catch (err) {
+            Logger.error("schedule.saveSchedule", err);
+            toast("Impossible d'enregistrer cette annonce.", "error");
+        }
+    });
 }
 
 function showScheduleDetail(id) {
@@ -248,17 +252,27 @@ function showScheduleDetail(id) {
 async function toggleScheduleActive(id) {
     const s = state.schedule.find(x => x.id === id);
     if (!s) return;
-    s.active = !s.active;
-    s.updatedAt = nowISO();
-    await ScheduleRepository.put(s);
-    await addHistory("schedule", id, s.active ? "restore" : "archive", s.active ? "Annonce réactivée" : "Annonce suspendue");
-    await loadScheduleData();
-    renderScheduleList();
-    renderScheduleSummary();
-    renderOverview();
-    renderAgenda();
-    showScheduleDetail(id);
-    toast(s.active ? "Annonce réactivée." : "Annonce suspendue.", "success");
+
+    await withActionLock(`schedule:active:${id}`, async () => {
+        try {
+            await withHistoryTx([db.schedule], async () => {
+                s.active = !s.active;
+                s.updatedAt = nowISO();
+                await ScheduleRepository.put(s);
+                await addHistory("schedule", id, s.active ? "restore" : "archive", s.active ? "Annonce réactivée" : "Annonce suspendue");
+            });
+            await loadScheduleData();
+            renderScheduleList();
+            renderScheduleSummary();
+            renderOverview();
+            renderAgenda();
+            showScheduleDetail(id);
+            toast(s.active ? "Annonce réactivée." : "Annonce suspendue.", "success");
+        } catch (err) {
+            Logger.error("schedule.toggleScheduleActive", err);
+            toast("Impossible de modifier cette annonce.", "error");
+        }
+    });
 }
 
 /* ============================================================
@@ -269,45 +283,53 @@ async function trashSchedule(id) {
     if (!s) return;
     if (!window.confirm(`Mettre à la corbeille « ${s.title} » ?\n\nElle pourra être restaurée depuis la Corbeille.`)) return;
 
-    try {
-        s.deletedAt = nowISO();
-        s.updatedAt = nowISO();
-        await ScheduleRepository.put(s);
-        await addHistory("schedule", id, "trash", "Annonce mise à la corbeille");
-        await loadScheduleData();
-        renderScheduleList();
-        renderScheduleSummary();
-        renderOverview();
-        renderAgenda();
-        renderTrash();
-        toast("Annonce mise à la corbeille.", "success");
-        showPage("announcements");
-    } catch (err) {
-        Logger.error("schedule.trashSchedule", err);
-        toast("Impossible de mettre cette annonce à la corbeille.", "error");
-    }
+    await withActionLock(`schedule:trash:${id}`, async () => {
+        try {
+            await withHistoryTx([db.schedule], async () => {
+                s.deletedAt = nowISO();
+                s.updatedAt = nowISO();
+                await ScheduleRepository.put(s);
+                await addHistory("schedule", id, "trash", "Annonce mise à la corbeille");
+            });
+            await loadScheduleData();
+            renderScheduleList();
+            renderScheduleSummary();
+            renderOverview();
+            renderAgenda();
+            renderTrash();
+            toast("Annonce mise à la corbeille.", "success");
+            showPage("announcements");
+        } catch (err) {
+            Logger.error("schedule.trashSchedule", err);
+            toast("Impossible de mettre cette annonce à la corbeille.", "error");
+        }
+    });
 }
 
 async function restoreSchedule(id) {
     const s = state.scheduleTrash.find(x => x.id === id);
     if (!s) return;
 
-    try {
-        s.deletedAt = null;
-        s.updatedAt = nowISO();
-        await ScheduleRepository.put(s);
-        await addHistory("schedule", id, "restore", "Annonce restaurée depuis la corbeille");
-        await loadScheduleData();
-        renderScheduleList();
-        renderScheduleSummary();
-        renderOverview();
-        renderAgenda();
-        renderTrash();
-        toast("Annonce restaurée.", "success");
-    } catch (err) {
-        Logger.error("schedule.restoreSchedule", err);
-        toast("Impossible de restaurer cette annonce.", "error");
-    }
+    await withActionLock(`schedule:restore:${id}`, async () => {
+        try {
+            await withHistoryTx([db.schedule], async () => {
+                s.deletedAt = null;
+                s.updatedAt = nowISO();
+                await ScheduleRepository.put(s);
+                await addHistory("schedule", id, "restore", "Annonce restaurée depuis la corbeille");
+            });
+            await loadScheduleData();
+            renderScheduleList();
+            renderScheduleSummary();
+            renderOverview();
+            renderAgenda();
+            renderTrash();
+            toast("Annonce restaurée.", "success");
+        } catch (err) {
+            Logger.error("schedule.restoreSchedule", err);
+            toast("Impossible de restaurer cette annonce.", "error");
+        }
+    });
 }
 
 async function purgeSchedule(id) {
@@ -315,20 +337,24 @@ async function purgeSchedule(id) {
     if (!s) return;
     if (!window.confirm(`Supprimer définitivement « ${s.title} » ?\n\nCette action est IRRÉVERSIBLE : la fiche ne pourra plus être restaurée.`)) return;
 
-    try {
-        await ScheduleRepository.remove(id);
-        await addHistory("schedule", id, "purge", "Annonce supprimée définitivement");
-        await loadScheduleData();
-        renderScheduleList();
-        renderScheduleSummary();
-        renderOverview();
-        renderAgenda();
-        renderTrash();
-        toast("Annonce supprimée définitivement.", "success");
-    } catch (err) {
-        Logger.error("schedule.purgeSchedule", err);
-        toast("Impossible de supprimer définitivement cette annonce.", "error");
-    }
+    await withActionLock(`schedule:purge:${id}`, async () => {
+        try {
+            await withHistoryTx([db.schedule], async () => {
+                await ScheduleRepository.remove(id);
+                await addHistory("schedule", id, "purge", "Annonce supprimée définitivement");
+            });
+            await loadScheduleData();
+            renderScheduleList();
+            renderScheduleSummary();
+            renderOverview();
+            renderAgenda();
+            renderTrash();
+            toast("Annonce supprimée définitivement.", "success");
+        } catch (err) {
+            Logger.error("schedule.purgeSchedule", err);
+            toast("Impossible de supprimer définitivement cette annonce.", "error");
+        }
+    });
 }
 
 /* ============================================================

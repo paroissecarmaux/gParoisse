@@ -258,20 +258,24 @@ async function savePerson(e) {
         groupe: isContact ? "" : $("#personGroupe").value.trim()
     };
 
-    try {
-        await PeopleRepository.put(person);
-        await addHistory("person", person.id, existing ? "update" : "create", existing ? "Fiche modifiée" : "Fiche créée");
-        await loadPeopleData();
-        renderPeopleList();
-        renderPeopleSummary();
-        renderOverview();
-        toast(existing ? "Personne modifiée." : "Personne ajoutée.", "success");
-        if (e.submitter?.dataset.action === "save-and-new") showPersonForm(null);
-        else showPersonDetail(person.id);
-    } catch (err) {
-        Logger.error("people.savePerson", err);
-        toast("Impossible d'enregistrer cette personne.", "error");
-    }
+    await withSubmitLock(e.target, async () => {
+        try {
+            await withHistoryTx([db.people], async () => {
+                await PeopleRepository.put(person);
+                await addHistory("person", person.id, existing ? "update" : "create", existing ? "Fiche modifiée" : "Fiche créée");
+            });
+            await loadPeopleData();
+            renderPeopleList();
+            renderPeopleSummary();
+            renderOverview();
+            toast(existing ? "Personne modifiée." : "Personne ajoutée.", "success");
+            if (e.submitter?.dataset.action === "save-and-new") showPersonForm(null);
+            else showPersonDetail(person.id);
+        } catch (err) {
+            Logger.error("people.savePerson", err);
+            toast("Impossible d'enregistrer cette personne.", "error");
+        }
+    });
 }
 
 function relatedRequestsFor(p) {
@@ -599,43 +603,51 @@ async function trashPerson(id) {
     const warning = personLinkedRecordsWarning(p);
     if (!window.confirm(`${warning}\n\nMettre à la corbeille la fiche de ${p.prenom} ${p.nom} ?\n\nElle pourra être restaurée depuis la Corbeille.`)) return;
 
-    try {
-        p.deletedAt = nowISO();
-        p.updatedAt = nowISO();
-        await PeopleRepository.put(p);
-        await addHistory("person", id, "trash", "Fiche mise à la corbeille");
-        await loadPeopleData();
-        renderPeopleList();
-        renderPeopleSummary();
-        renderOverview();
-        renderTrash();
-        toast("Personne mise à la corbeille.", "success");
-        showPage("people");
-    } catch (err) {
-        Logger.error("people.trashPerson", err);
-        toast("Impossible de mettre cette personne à la corbeille.", "error");
-    }
+    await withActionLock(`person:trash:${id}`, async () => {
+        try {
+            await withHistoryTx([db.people], async () => {
+                p.deletedAt = nowISO();
+                p.updatedAt = nowISO();
+                await PeopleRepository.put(p);
+                await addHistory("person", id, "trash", "Fiche mise à la corbeille");
+            });
+            await loadPeopleData();
+            renderPeopleList();
+            renderPeopleSummary();
+            renderOverview();
+            renderTrash();
+            toast("Personne mise à la corbeille.", "success");
+            showPage("people");
+        } catch (err) {
+            Logger.error("people.trashPerson", err);
+            toast("Impossible de mettre cette personne à la corbeille.", "error");
+        }
+    });
 }
 
 async function restorePerson(id) {
     const p = state.peopleTrash.find(x => x.id === id);
     if (!p) return;
 
-    try {
-        p.deletedAt = null;
-        p.updatedAt = nowISO();
-        await PeopleRepository.put(p);
-        await addHistory("person", id, "restore", "Fiche restaurée depuis la corbeille");
-        await loadPeopleData();
-        renderPeopleList();
-        renderPeopleSummary();
-        renderOverview();
-        renderTrash();
-        toast("Personne restaurée.", "success");
-    } catch (err) {
-        Logger.error("people.restorePerson", err);
-        toast("Impossible de restaurer cette personne.", "error");
-    }
+    await withActionLock(`person:restore:${id}`, async () => {
+        try {
+            await withHistoryTx([db.people], async () => {
+                p.deletedAt = null;
+                p.updatedAt = nowISO();
+                await PeopleRepository.put(p);
+                await addHistory("person", id, "restore", "Fiche restaurée depuis la corbeille");
+            });
+            await loadPeopleData();
+            renderPeopleList();
+            renderPeopleSummary();
+            renderOverview();
+            renderTrash();
+            toast("Personne restaurée.", "success");
+        } catch (err) {
+            Logger.error("people.restorePerson", err);
+            toast("Impossible de restaurer cette personne.", "error");
+        }
+    });
 }
 
 async function purgePerson(id) {
@@ -643,21 +655,25 @@ async function purgePerson(id) {
     if (!p) return;
     if (!window.confirm(`Supprimer définitivement la fiche de ${p.prenom} ${p.nom} ?\n\nCette action est IRRÉVERSIBLE : la fiche ne pourra plus être restaurée.`)) return;
 
-    try {
-        await PeopleRepository.remove(id);
-        // Historique conservé après purge, comme pour les demandes : voir
-        // docs/V6.2-C-DESIGN.md.
-        await addHistory("person", id, "purge", "Fiche supprimée définitivement");
-        await loadPeopleData();
-        renderPeopleList();
-        renderPeopleSummary();
-        renderOverview();
-        renderTrash();
-        toast("Personne supprimée définitivement.", "success");
-    } catch (err) {
-        Logger.error("people.purgePerson", err);
-        toast("Impossible de supprimer définitivement cette personne.", "error");
-    }
+    await withActionLock(`person:purge:${id}`, async () => {
+        try {
+            await withHistoryTx([db.people], async () => {
+                await PeopleRepository.remove(id);
+                // Historique conservé après purge, comme pour les demandes : voir
+                // docs/V6.2-C-DESIGN.md.
+                await addHistory("person", id, "purge", "Fiche supprimée définitivement");
+            });
+            await loadPeopleData();
+            renderPeopleList();
+            renderPeopleSummary();
+            renderOverview();
+            renderTrash();
+            toast("Personne supprimée définitivement.", "success");
+        } catch (err) {
+            Logger.error("people.purgePerson", err);
+            toast("Impossible de supprimer définitivement cette personne.", "error");
+        }
+    });
 }
 
 /* ============================================================
