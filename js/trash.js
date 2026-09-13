@@ -80,6 +80,9 @@ function renderTrashCard({ cfg, record }) {
             <div>
                 <div class="request-date">Mis à la corbeille le ${formatDateTime(record.deletedAt)}</div>
             </div>
+            <div class="badge-row">
+                <span class="badge cancelled">${icon("trash", "icon-inline")}En corbeille</span>
+            </div>
             <div class="request-actions">
                 <button class="icon-btn" data-action="restore" title="Restaurer" aria-label="Restaurer">${icon("restore")}</button>
                 <button class="icon-btn" data-action="purge" title="Supprimer définitivement" aria-label="Supprimer définitivement">${icon("trash")}</button>
