@@ -46,6 +46,14 @@ loadScripts(context, [
     // référence DATA_MODULES — detectBackupPayload() prend sa liste de
     // clés en paramètre plutôt que de lire DATA_MODULES directement.
     "js/core/backup.js",
+    // js/core/directory.js (V6.8.a) : personToDirectoryEntry/
+    // personnelToDirectoryEntry/hasRole/getRolesByType/
+    // computeDirectoryMigration sont réellement pures (n'utilisent que
+    // nowISO(), déjà chargé). migratePeopleAndPersonnelToDirectory()/
+    // loadDirectoryData() référencent DirectoryRepository/PeopleRepository/
+    // state/Logger, absents de ce contexte — non appelées par les tests
+    // ci-dessous, même principe que js/core/history.js juste au-dessus.
+    "js/core/directory.js",
     // js/diagnostics.js (V6.6) lit `state.*` au moment de l'appel, pas au
     // chargement — safe à charger ici sans js/state.js ; les tests
     // ci-dessous posent `context.state` manuellement avant d'appeler les
@@ -525,6 +533,234 @@ test("checkPossibleDuplicates: personnes différentes -> rien signalé", () => {
         ]
     };
     assertSameStructure(context.checkPossibleDuplicates(), []);
+});
+
+/* ---------- js/core/directory.js : fondations de l'Annuaire (V6.8.a) ---------- */
+
+test("personToDirectoryEntry: paroissien complet -> rôle registre avec les champs sacramentaux", () => {
+    const person = {
+        id: "p1", profileType: "paroissien", prenom: "Marie", nom: "Dupont",
+        dateNaissance: "1950-03-02", lieuNaissance: "Carmaux", telephone: "0600000000",
+        rgpd: true, registre: "Registre 1950", lieuBapteme: "Église Saint-Jean",
+        diocese: "Albi", anneeBapteme: "1950", numeroBapteme: "12", dateBapteme: "1950-04-01",
+        parrain: "Jean", marraine: "Anne", temoin: "", dateCommunion: "1958-05-01",
+        lieuCommunion: "", dateConfirmation: "1962-06-01", lieuConfirmation: "",
+        dateMariage: "", lieuMariage: "", conjoint: "",
+        notes: "Note existante", createdAt: "2020-01-01T00:00:00.000Z", updatedAt: "2020-01-02T00:00:00.000Z"
+    };
+    const entry = context.personToDirectoryEntry(person);
+    assert.strictEqual(entry.id, "p1");
+    assert.strictEqual(entry.entityType, "person");
+    assert.strictEqual(entry.roles.length, 1);
+    assert.strictEqual(entry.roles[0].type, "registre");
+    assert.strictEqual(entry.roles[0].active, true);
+    assert.strictEqual(entry.roles[0].lieuBapteme, "Église Saint-Jean");
+    assert.strictEqual(entry.roles[0].dateBapteme, "1950-04-01");
+    assert.strictEqual(entry.roles[0].parrain, "Jean");
+    assert.strictEqual(entry.notes, "Note existante");
+});
+
+test("personToDirectoryEntry: contact -> rôle contact sans champ sacramentel", () => {
+    const person = { id: "p2", profileType: "contact", prenom: "Paul", nom: "Martin", rgpd: false };
+    const entry = context.personToDirectoryEntry(person);
+    assert.strictEqual(entry.roles.length, 1);
+    assert.strictEqual(entry.roles[0].type, "contact");
+    assert.strictEqual(entry.roles[0].rgpd, undefined);
+});
+
+test("personToDirectoryEntry: RGPD conservé sur le rôle registre", () => {
+    const withConsent = context.personToDirectoryEntry({ id: "p3", profileType: "paroissien", rgpd: true });
+    const withoutConsent = context.personToDirectoryEntry({ id: "p4", profileType: "paroissien", rgpd: false });
+    assert.strictEqual(withConsent.roles[0].rgpd, true);
+    assert.strictEqual(withoutConsent.roles[0].rgpd, false);
+});
+
+test("personToDirectoryEntry: role/groupe (texte libre) conservés dans notes, jamais structurés", () => {
+    const entry = context.personToDirectoryEntry({
+        id: "p5", profileType: "paroissien", role: "Catéchiste", groupe: "Éveil à la foi", notes: "RAS"
+    });
+    assert.ok(entry.notes.includes("Catéchiste"));
+    assert.ok(entry.notes.includes("Éveil à la foi"));
+    assert.ok(entry.notes.includes("RAS"));
+    // Aucun rôle structuré "catechiste" ou similaire n'est créé à partir de ces champs.
+    assert.strictEqual(entry.roles.length, 1);
+    assert.strictEqual(entry.roles[0].type, "registre");
+});
+
+test("personToDirectoryEntry: personne supprimée -> deletedAt conservé", () => {
+    const entry = context.personToDirectoryEntry({ id: "p6", profileType: "contact", deletedAt: "2024-01-01T00:00:00.000Z" });
+    assert.strictEqual(entry.deletedAt, "2024-01-01T00:00:00.000Z");
+});
+
+test("personToDirectoryEntry: id conservé à l'identique", () => {
+    const entry = context.personToDirectoryEntry({ id: "exact-same-id", profileType: "contact" });
+    assert.strictEqual(entry.id, "exact-same-id");
+});
+
+test("personnelToDirectoryEntry: bénévole -> rôle benevole avec domaine", () => {
+    const entry = context.personnelToDirectoryEntry({
+        id: "e1", prenom: "Alice", nom: "Roy", typeEngagement: "Bénévole", etat: "Laïc",
+        fonction: "Catéchisme", active: true, dateDebut: "2019-01-01"
+    });
+    assert.strictEqual(entry.roles.length, 1);
+    assert.strictEqual(entry.roles[0].type, "benevole");
+    assert.strictEqual(entry.roles[0].domaine, "Catéchisme");
+    assert.strictEqual(entry.roles[0].active, true);
+});
+
+test("personnelToDirectoryEntry: salarié -> rôle salarie avec fonction", () => {
+    const entry = context.personnelToDirectoryEntry({
+        id: "e2", typeEngagement: "Salarié", etat: "Laïc", fonction: "Secrétaire", active: true
+    });
+    assert.strictEqual(entry.roles.length, 1);
+    assert.strictEqual(entry.roles[0].type, "salarie");
+    assert.strictEqual(entry.roles[0].fonction, "Secrétaire");
+});
+
+test("personnelToDirectoryEntry: prêtre -> rôle clerge avec etatCanonique", () => {
+    const entry = context.personnelToDirectoryEntry({ id: "e3", typeEngagement: "Bénévole", etat: "Prêtre", active: true });
+    const clerge = entry.roles.find(r => r.type === "clerge");
+    assert.ok(clerge);
+    assert.strictEqual(clerge.etatCanonique, "Prêtre");
+});
+
+test("personnelToDirectoryEntry: diacre -> rôle clerge avec etatCanonique Diacre", () => {
+    const entry = context.personnelToDirectoryEntry({ id: "e4", typeEngagement: "Bénévole", etat: "Diacre", active: true });
+    assert.strictEqual(entry.roles.find(r => r.type === "clerge").etatCanonique, "Diacre");
+});
+
+test("personnelToDirectoryEntry: religieux(se) -> rôle clerge avec etatCanonique Religieux(se)", () => {
+    const entry = context.personnelToDirectoryEntry({ id: "e5", typeEngagement: "Bénévole", etat: "Religieux(se)", active: true });
+    assert.strictEqual(entry.roles.find(r => r.type === "clerge").etatCanonique, "Religieux(se)");
+});
+
+test("personnelToDirectoryEntry: laïc -> jamais de rôle clerge", () => {
+    const entry = context.personnelToDirectoryEntry({ id: "e6", typeEngagement: "Salarié", etat: "Laïc", active: true });
+    assert.strictEqual(entry.roles.some(r => r.type === "clerge"), false);
+});
+
+test("personnelToDirectoryEntry: engagement + clergé -> deux rôles indépendants", () => {
+    const entry = context.personnelToDirectoryEntry({
+        id: "e7", typeEngagement: "Salarié", etat: "Prêtre", fonction: "Curé", active: true, dateDebut: "2010-01-01"
+    });
+    assert.strictEqual(entry.roles.length, 2);
+    assert.ok(entry.roles.some(r => r.type === "salarie" && r.fonction === "Curé"));
+    assert.ok(entry.roles.some(r => r.type === "clerge" && r.etatCanonique === "Prêtre"));
+});
+
+test("personnelToDirectoryEntry: entrée inactive -> active propagé aux rôles", () => {
+    const entry = context.personnelToDirectoryEntry({ id: "e8", typeEngagement: "Bénévole", etat: "Laïc", active: false });
+    assert.strictEqual(entry.roles[0].active, false);
+});
+
+test("personnelToDirectoryEntry: entrée supprimée -> deletedAt conservé", () => {
+    const entry = context.personnelToDirectoryEntry({ id: "e9", typeEngagement: "Bénévole", etat: "Laïc", active: true, deletedAt: "2023-05-05T00:00:00.000Z" });
+    assert.strictEqual(entry.deletedAt, "2023-05-05T00:00:00.000Z");
+});
+
+test("personnelToDirectoryEntry: id conservé à l'identique", () => {
+    const entry = context.personnelToDirectoryEntry({ id: "exact-personnel-id", typeEngagement: "Bénévole", etat: "Laïc", active: true });
+    assert.strictEqual(entry.id, "exact-personnel-id");
+});
+
+test("personnelToDirectoryEntry: aucun rôle déterminable -> roles vide, donnée conservée en notes, jamais de rôle inventé", () => {
+    const entry = context.personnelToDirectoryEntry({ id: "e10", typeEngagement: "Stagiaire", etat: "Laïc", fonction: "Aide ponctuelle", active: true });
+    assert.strictEqual(entry.roles.length, 0);
+    assert.ok(entry.notes.includes("Stagiaire"));
+    assert.ok(entry.notes.includes("Aide ponctuelle"));
+});
+
+/* ---------- hasRole() / getRolesByType() ---------- */
+
+test("hasRole: aucun rôle -> false", () => {
+    assert.strictEqual(context.hasRole({ roles: [] }, "benevole"), false);
+});
+test("hasRole: un rôle correspondant -> true", () => {
+    assert.strictEqual(context.hasRole({ roles: [{ type: "benevole", active: true }] }, "benevole"), true);
+});
+test("hasRole: plusieurs rôles différents -> ne répond que pour le type demandé", () => {
+    const entry = { roles: [{ type: "benevole", active: true }, { type: "contact", active: true }] };
+    assert.strictEqual(context.hasRole(entry, "benevole"), true);
+    assert.strictEqual(context.hasRole(entry, "salarie"), false);
+});
+test("hasRole: plusieurs instances du même rôle -> true dès qu'une est active", () => {
+    const entry = { roles: [
+        { type: "benevole", active: false, domaine: "Catéchisme" },
+        { type: "benevole", active: true, domaine: "Accueil" }
+    ] };
+    assert.strictEqual(context.hasRole(entry, "benevole"), true);
+});
+test("hasRole: rôle présent mais inactif (seule instance) -> false", () => {
+    assert.strictEqual(context.hasRole({ roles: [{ type: "salarie", active: false }] }, "salarie"), false);
+});
+test("getRolesByType: renvoie toutes les instances, actives ou non", () => {
+    const entry = { roles: [
+        { type: "benevole", active: false, domaine: "Catéchisme" },
+        { type: "benevole", active: true, domaine: "Accueil" },
+        { type: "contact", active: true }
+    ] };
+    const result = context.getRolesByType(entry, "benevole");
+    assert.strictEqual(result.length, 2);
+});
+
+/* ---------- computeDirectoryMigration() ---------- */
+
+test("computeDirectoryMigration: ensemble vide -> rien à créer", () => {
+    const { toCreate, report } = context.computeDirectoryMigration(new Set(), [], []);
+    assertSameStructure(toCreate, []);
+    assert.strictEqual(report.createdFromPeople, 0);
+    assert.strictEqual(report.createdFromPersonnel, 0);
+    assert.strictEqual(report.skipped, 0);
+});
+
+test("computeDirectoryMigration: migration de people seul", () => {
+    const people = [{ id: "p1", profileType: "paroissien" }, { id: "p2", profileType: "contact" }];
+    const { toCreate, report } = context.computeDirectoryMigration(new Set(), people, []);
+    assert.strictEqual(toCreate.length, 2);
+    assert.strictEqual(report.createdFromPeople, 2);
+    assert.strictEqual(report.createdFromPersonnel, 0);
+});
+
+test("computeDirectoryMigration: migration de personnel seul", () => {
+    const personnel = [{ id: "e1", typeEngagement: "Bénévole", etat: "Laïc", active: true }];
+    const { toCreate, report } = context.computeDirectoryMigration(new Set(), [], personnel);
+    assert.strictEqual(toCreate.length, 1);
+    assert.strictEqual(report.createdFromPersonnel, 1);
+});
+
+test("computeDirectoryMigration: migration des deux -> ids conservés", () => {
+    const people = [{ id: "p1", profileType: "paroissien" }];
+    const personnel = [{ id: "e1", typeEngagement: "Salarié", etat: "Laïc", active: true }];
+    const { toCreate } = context.computeDirectoryMigration(new Set(), people, personnel);
+    assert.strictEqual(toCreate.length, 2);
+    assertSameStructure(toCreate.map(e => e.id).sort(), ["e1", "p1"]);
+});
+
+test("computeDirectoryMigration: deletedAt (corbeille) conservé pendant la migration", () => {
+    const people = [{ id: "p1", profileType: "contact", deletedAt: "2024-06-01T00:00:00.000Z" }];
+    const { toCreate } = context.computeDirectoryMigration(new Set(), people, []);
+    assert.strictEqual(toCreate[0].deletedAt, "2024-06-01T00:00:00.000Z");
+});
+
+test("computeDirectoryMigration: personnel sans rôle déterminable -> avertissement", () => {
+    const personnel = [{ id: "e1", typeEngagement: "Inconnu", etat: "Laïc", active: true }];
+    const { report } = context.computeDirectoryMigration(new Set(), [], personnel);
+    assert.strictEqual(report.warnings.length, 1);
+});
+
+test("computeDirectoryMigration: seconde exécution -> aucune duplication (idempotence)", () => {
+    const people = [{ id: "p1", profileType: "paroissien" }];
+    const personnel = [{ id: "e1", typeEngagement: "Bénévole", etat: "Laïc", active: true }];
+
+    const first = context.computeDirectoryMigration(new Set(), people, personnel);
+    assert.strictEqual(first.toCreate.length, 2);
+
+    // Simule l'état de `directory` après la première exécution : les deux
+    // id existent désormais.
+    const existingAfterFirstRun = new Set(first.toCreate.map(e => e.id));
+    const second = context.computeDirectoryMigration(existingAfterFirstRun, people, personnel);
+    assert.strictEqual(second.toCreate.length, 0);
+    assert.strictEqual(second.report.skipped, 2);
 });
 
 console.log(`\n${passed} test(s) réussi(s), ${failed} échec(s).`);

@@ -82,6 +82,20 @@ Risque : faible à moyen — le format change, mais la conversion est un simple 
 - 6 fonctions sans aucune gestion d'erreur, corrigées. 78 tests (67 → 78), README à jour.
 - Comme pour les phases précédentes, aucun test manuel en navigateur n'a été effectué (pas d'environnement navigateur disponible) — à valider manuellement avant mise en production (voir `docs/V6.6-IMPLEMENTATION.md` §7).
 
+## V6.7 — Conception de l'Annuaire (Personnes & Organisations)
+
+**Statut : ✅ COMPLET** (conception uniquement, 2026-09-13, voir `docs/V6.7-ANNUAIRE-DESIGN.md`). Aucun code modifié. Remplace le concept actuel « Membres »/« Personnel » (deux tables Dexie disjointes, rôles non cumulables) par un modèle d'Annuaire unique (`directory`, `entityType: person|organization`, `roles` cumulables).
+
+## V6.8 — Implémentation de l'Annuaire (sous-phasée)
+
+- **V6.8.a — Fondations et migration** : **✅ COMPLET** (2026-09-13, voir `docs/V6.8-A-ANNUAIRE-FONDATIONS.md`). `db.version(11)` (table `directory`, additive), `personToDirectoryEntry()`/`personnelToDirectoryEntry()`, `hasRole()`/`getRolesByType()`, migration idempotente exécutée au démarrage (id conservés, aucune fusion automatique, `people`/`personnel` intactes et toujours actives). 108 tests (78 → 108).
+- **V6.8.b — Module Annuaire** : non commencé. Nouvelle interface liste/détail/formulaire unifiée, badges de rôle, filtres.
+- **V6.8.c — Intégration transverse** : non commencé. Bascule de `requests.personId`/`intentions.personId`/`intentions.personnelId`, historique, corbeille, recherche globale, diagnostic d'intégrité étendu, import/export, retrait des raccourcis pointant encore vers `people.js`/`personnel.js`.
+
+## V6.9 — Stabilisation de l'Annuaire (proposé, non commencé)
+
+Validation manuelle en navigateur de la migration sur des données réelles, outil de fusion manuelle des doublons people/personnel détectés, nettoyage éventuel du code devenu mort une fois le nouveau modèle confirmé stable.
+
 ## TypeScript — position (pas de migration automatique)
 
 Étudié comme demandé, sans décision de migration :

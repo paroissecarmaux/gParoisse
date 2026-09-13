@@ -2,6 +2,15 @@
 
 Suit la numérotation de `docs/ROADMAP.md`, pas de dates de release — chaque phase peut s'étaler sur plusieurs sessions. Rédigé à partir de l'historique git réel et des documents d'implémentation (`docs/REVIEW-V6.0-V6.1.md`, `docs/V6.2-C-IMPLEMENTATION.md`), pas d'une mémoire reconstruite.
 
+## V6.8.a — Fondations et migration de l'Annuaire
+
+- Nouvelle table Dexie `directory` (`db.version(11)`, additive) — `people`/`personnel` inchangées, toujours actives.
+- `personToDirectoryEntry()`/`personnelToDirectoryEntry()` (`js/core/directory.js`) : transformation pure vers le modèle Annuaire (`entityType`, `roles` cumulables) — id, `deletedAt`, sacrements, RGPD conservés sans perte ; `role`/`groupe` (texte libre) conservés en notes plutôt qu'interprétés.
+- `hasRole()`/`getRolesByType()` : lecture des rôles, support natif de plusieurs instances du même rôle.
+- Migration idempotente (`migratePeopleAndPersonnelToDirectory()`), exécutée à chaque démarrage : aucune fusion automatique des doublons people/personnel, aucun rôle inventé quand la donnée source ne permet pas d'en déduire un (signalé, pas masqué).
+- 108 tests (78 → 108). Aucun écran remplacé, aucune référence croisée (`personId`/`personnelId`) modifiée — prévu pour V6.8.b/c.
+- Voir `docs/V6.7-ANNUAIRE-DESIGN.md` (conception) et `docs/V6.8-A-ANNUAIRE-FONDATIONS.md` (détail de cette sous-phase).
+
 ## V6.6 — Consolidation et durcissement
 
 - Audit complet du dépôt (`docs/V6.6-AUDIT.md`), puis correction directe des points 🔴/🟠 trouvés (`docs/V6.6-IMPLEMENTATION.md`).

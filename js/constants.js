@@ -95,3 +95,11 @@ const ENTITY_TYPE_LABELS = {
     personnel: "Personnel",
     intention: "Intention"
 };
+
+/* --- Annuaire (V6.8.a) — vocabulaire contrôlé, purement descriptif
+   comme HISTORY_ACTIONS ci-dessus : rien ne rejette une valeur hors de
+   cette liste, elle sert de référence pour la validation/le diagnostic
+   (à venir en V6.8.c). Justification de chaque rôle :
+   docs/V6.7-ANNUAIRE-DESIGN.md §5.2. --- */
+const DIRECTORY_ENTITY_TYPES = ["person", "organization"];
+const DIRECTORY_ROLE_TYPES = ["registre", "clerge", "salarie", "benevole", "contact", "fournisseur", "association"];

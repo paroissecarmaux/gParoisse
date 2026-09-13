@@ -91,3 +91,28 @@ db.version(10).stores({
     personnel: "id, nom, prenom, typeEngagement, active, updatedAt",
     intentions: "id, type, statut, dateDebut, updatedAt"
 });
+
+// v11 : fondations de l'Annuaire (V6.8.a — voir docs/V6.7-ANNUAIRE-DESIGN.md
+// et docs/V6.8-A-ANNUAIRE-FONDATIONS.md). Nouvelle table `directory`
+// uniquement : people/personnel restent déclarées à l'identique ci-
+// dessous (Dexie exige de relister toutes les tables, mais rien n'y
+// change) — toujours lues par js/people.js/js/personnel.js pendant
+// cette sous-phase, la bascule de l'UI et des références croisées
+// (requests.personId, intentions.personId/personnelId) est prévue
+// pour V6.8.b/c, pas ici.
+// `roles` (tableau d'objets sur chaque entrée directory) n'est
+// volontairement pas indexé : comme deletedAt depuis V6.2.c, un
+// filtrage en mémoire suffit au volume d'une petite paroisse, et un
+// tableau d'objets ne se prête de toute façon pas à un index Dexie
+// simple.
+db.version(11).stores({
+    requests: "id, status, type, priority, dateDemande, deadline, updatedAt, archived, name",
+    history: "id, requestId, entityType, entityId, createdAt",
+    settings: "key",
+    people: "id, nom, prenom, updatedAt",
+    schedule: "id, kind, dayOfWeek, date, updatedAt",
+    clochers: "id, nom, commune, updatedAt",
+    personnel: "id, nom, prenom, typeEngagement, active, updatedAt",
+    intentions: "id, type, statut, dateDebut, updatedAt",
+    directory: "id, entityType, updatedAt"
+});

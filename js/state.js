@@ -17,6 +17,12 @@ const state = {
     personnelTrash: [],
     intentions: [],
     intentionsTrash: [],
+    // V6.8.a : fondations de l'Annuaire (docs/V6.7-ANNUAIRE-DESIGN.md).
+    // Peuplé en parallèle de people/personnel (migration idempotente,
+    // js/core/directory.js) ; aucun écran ne lit encore ces tableaux —
+    // préparés pour V6.8.b.
+    directory: [],
+    directoryTrash: [],
     page: "overview",
     view: "active",
     quickFilter: null,

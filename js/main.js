@@ -121,6 +121,14 @@ async function init() {
         await loadClochersData();
         await loadPersonnelData();
         await loadIntentionsData();
+        // V6.8.a : fondations de l'Annuaire (docs/V6.7-ANNUAIRE-DESIGN.md).
+        // Migration additive et idempotente people/personnel -> directory
+        // (aucun écran ne lit encore state.directory) — voir
+        // js/core/directory.js. Exécutée à chaque démarrage : sans effet
+        // une fois tout migré, reprend toute fiche people/personnel créée
+        // depuis (les deux modules restent actifs pendant cette phase).
+        await migratePeopleAndPersonnelToDirectory();
+        await loadDirectoryData();
         renderRequestsSummary();
         renderRequests();
         renderPeopleList();
