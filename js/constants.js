@@ -62,3 +62,28 @@ const PERSONNEL_ETATS = ["Laïc", "Prêtre", "Diacre", "Religieux(se)"];
 // dans js/intentions.js).
 const INTENTION_TYPES = ["Défunt", "Anniversaire", "Neuvaine", "Action de grâce", "Vivants", "Autre"];
 const INTENTION_STATUS = ["À célébrer", "Célébrée", "Annulée"];
+
+/* --- Historique & corbeille (V6.2.c) — vocabulaire contrôlé, jamais
+   de texte libre, pour rester exploitable (ex. filtrer par action) --- */
+const ENTITY_TYPES = ["request", "person", "schedule", "clocher", "personnel", "intention"];
+
+// "restore" sert à la fois pour une demande désarchivée et pour un
+// enregistrement restauré depuis la corbeille : un seul mot pour une
+// seule idée ("remis en état actif"), pas de synonyme superflu.
+// Liste purement descriptive (rien ne valide les entrées existantes
+// contre elle) : "delete" a été utilisé par d'anciennes entrées, avant
+// la corbeille (V6.2.c), quand la suppression était encore directe et
+// définitive. Elles restent lisibles telles quelles, seul l'écriture
+// de nouvelles entrées se limite désormais à cette liste.
+const HISTORY_ACTIONS = ["create", "update", "archive", "restore", "complete", "trash", "purge"];
+
+// Libellés humains par type d'entité, réutilisés par la Corbeille et
+// les futures vues d'historique transverses.
+const ENTITY_TYPE_LABELS = {
+    request: "Demande",
+    person: "Personne",
+    schedule: "Annonce",
+    clocher: "Clocher",
+    personnel: "Personnel",
+    intention: "Intention"
+};

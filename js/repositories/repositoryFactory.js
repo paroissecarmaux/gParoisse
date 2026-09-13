@@ -14,8 +14,15 @@
    plutôt que d'imposer un ordre générique.
 ============================================================ */
 function createRepository(table, listFn) {
+    const list = listFn || (() => table.toArray());
     return {
-        list: listFn || (() => table.toArray()),
+        list,
+        // V6.2.c : filtrage actif/corbeille centralisé ici plutôt que
+        // dispersé dans chaque module — deletedAt n'est pas indexé
+        // dans Dexie (pas justifié au volume actuel), on filtre donc
+        // en mémoire sur le résultat de list(), pas via une requête.
+        listActive: async () => (await list()).filter(isActive),
+        listDeleted: async () => (await list()).filter(isDeleted),
         get: id => table.get(id),
         put: record => table.put(record),
         remove: id => table.delete(id),

@@ -38,6 +38,7 @@ const PRECACHE_URLS = [
     "./js/repositories/intentionsRepository.js",
     "./js/repositories/historyRepository.js",
     "./js/repositories/settingsRepository.js",
+    "./js/core/history.js",
     "./js/state.js",
     "./js/requests.js",
     "./js/people.js",

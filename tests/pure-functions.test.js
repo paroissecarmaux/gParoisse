@@ -32,7 +32,14 @@ loadScripts(context, [
     "js/csv.js",
     "js/requests.js",
     "js/schedule.js",
-    "js/intentions.js"
+    "js/intentions.js",
+    // Charger js/core/history.js ici ne fait qu'ajouter des déclarations
+    // de fonctions (aucune exécutée au chargement) : certaines d'entre
+    // elles (relatedHistoryFor, historySectionHTML) référencent `state`/
+    // `HistoryRepository`, absents de ce contexte, mais ce n'est un
+    // problème que si on les *appelle* — les tests ci-dessous n'exercent
+    // que historyEntityType/historyEntityId, réellement pures.
+    "js/core/history.js"
 ]);
 
 let passed = 0;
@@ -328,6 +335,60 @@ test("buildImportReportHTML: dates non reconnues listées séparément des ligne
     assert.ok(html.includes("1 date(s) non reconnue(s)"));
     assert.ok(html.includes("Ligne 18"));
     assert.ok(html.includes("31/02/2026"));
+});
+
+/* ---------- js/utils.js : corbeille (V6.2.c) ---------- */
+
+test("isDeleted: absent -> false", () => {
+    assert.strictEqual(context.isDeleted({}), false);
+    assert.strictEqual(context.isDeleted({ deletedAt: "" }), false);
+    assert.strictEqual(context.isDeleted({ deletedAt: null }), false);
+});
+test("isDeleted: renseigné -> true", () => {
+    assert.strictEqual(context.isDeleted({ deletedAt: "2026-09-13T10:00:00.000Z" }), true);
+});
+test("isActive: strictement l'inverse d'isDeleted", () => {
+    assert.strictEqual(context.isActive({}), true);
+    assert.strictEqual(context.isActive({ deletedAt: "2026-09-13T10:00:00.000Z" }), false);
+});
+
+test("findLinked: id vide -> status 'none'", () => {
+    const result = context.findLinked([{ id: "p1" }], [], "");
+    assert.strictEqual(result.status, "none");
+    assert.strictEqual(result.record, null);
+});
+test("findLinked: trouvé actif -> status 'active'", () => {
+    const active = [{ id: "p1", nom: "Dupont" }];
+    const result = context.findLinked(active, [], "p1");
+    assert.strictEqual(result.status, "active");
+    assert.strictEqual(result.record.nom, "Dupont");
+});
+test("findLinked: trouvé seulement dans la corbeille -> status 'trashed'", () => {
+    const active = [{ id: "p2" }];
+    const trash = [{ id: "p1", nom: "Dupont" }];
+    const result = context.findLinked(active, trash, "p1");
+    assert.strictEqual(result.status, "trashed");
+    assert.strictEqual(result.record.nom, "Dupont");
+});
+test("findLinked: introuvable dans les deux -> status 'missing'", () => {
+    const result = context.findLinked([{ id: "p2" }], [{ id: "p3" }], "p1");
+    assert.strictEqual(result.status, "missing");
+    assert.strictEqual(result.record, null);
+});
+
+/* ---------- js/core/history.js : compatibilité anciennes entrées ---------- */
+
+test("historyEntityType: entrée récente -> son propre entityType", () => {
+    assert.strictEqual(context.historyEntityType({ entityType: "person" }), "person");
+});
+test("historyEntityType: ancienne entrée (sans entityType) -> 'request' par défaut", () => {
+    assert.strictEqual(context.historyEntityType({ requestId: "r1" }), "request");
+});
+test("historyEntityId: entrée récente -> son propre entityId", () => {
+    assert.strictEqual(context.historyEntityId({ entityId: "p1", requestId: "r1" }), "p1");
+});
+test("historyEntityId: ancienne entrée -> repli sur requestId", () => {
+    assert.strictEqual(context.historyEntityId({ requestId: "r1" }), "r1");
 });
 
 console.log(`\n${passed} test(s) réussi(s), ${failed} échec(s).`);

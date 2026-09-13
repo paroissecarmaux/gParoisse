@@ -67,3 +67,27 @@ db.version(9).stores({
     personnel: "id, nom, prenom, typeEngagement, active, updatedAt",
     intentions: "id, type, statut, dateDebut, updatedAt"
 });
+
+// v10 : corbeille + historique généralisé (V6.2.c).
+// - deletedAt (toutes les tables métier) : volontairement NON indexé
+//   (peu de bases dépassent quelques milliers d'enregistrements, un
+//   filtre en mémoire sur listActive()/listDeleted() suffit — voir
+//   js/repositories/repositoryFactory.js). Les chaînes d'index ci-
+//   dessous sont donc identiques à la v9 pour ces tables : Dexie
+//   exige de toutes les relister, mais rien n'y change réellement.
+// - history gagne entityType/entityId (indexés, remplacent l'usage
+//   futur de requestId) pour couvrir tous les modules et pas
+//   seulement les demandes ; requestId reste indexé pour ne pas
+//   perdre l'accès aux entrées déjà enregistrées avant cette version
+//   (lues comme entityType="request", entityId=requestId — voir
+//   js/core/history.js).
+db.version(10).stores({
+    requests: "id, status, type, priority, dateDemande, deadline, updatedAt, archived, name",
+    history: "id, requestId, entityType, entityId, createdAt",
+    settings: "key",
+    people: "id, nom, prenom, updatedAt",
+    schedule: "id, kind, dayOfWeek, date, updatedAt",
+    clochers: "id, nom, commune, updatedAt",
+    personnel: "id, nom, prenom, typeEngagement, active, updatedAt",
+    intentions: "id, type, statut, dateDebut, updatedAt"
+});

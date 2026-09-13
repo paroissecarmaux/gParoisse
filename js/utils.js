@@ -155,6 +155,36 @@ function countByField(array, field, id) {
     return (array || []).filter(item => item[field] === id).length;
 }
 
+/* ============================================================
+   CORBEILLE (V6.2.c)
+   Convention centralisée : un enregistrement est actif tant que
+   deletedAt est absent. Le filtrage a lieu une seule fois, au
+   chargement (repositories `listActive`/`listDeleted`) — ces deux
+   fonctions ne sont qu'un vocabulaire partagé pour ce filtrage,
+   volontairement triviales pour rester pures et évidentes.
+============================================================ */
+function isDeleted(record) {
+    return Boolean(record?.deletedAt);
+}
+
+function isActive(record) {
+    return !isDeleted(record);
+}
+
+// Résout un lien (ex. requests.personId) sur deux listes déjà chargées
+// (actifs, corbeille) pour distinguer trois cas à l'affichage :
+// « active » (fiche existante, lien cliquable), « trashed » (fiche
+// existante mais en corbeille, restaurable), « missing » (fiche
+// supprimée définitivement ou id vide).
+function findLinked(activeList, trashList, id) {
+    if (!id) return { record: null, status: "none" };
+    const active = (activeList || []).find(x => x.id === id);
+    if (active) return { record: active, status: "active" };
+    const trashed = (trashList || []).find(x => x.id === id);
+    if (trashed) return { record: trashed, status: "trashed" };
+    return { record: null, status: "missing" };
+}
+
 // Assemble ["3 demandes", "1 intention"] -> "3 demandes et 1 intention"
 // ou ["3 demandes", "2 annonces", "1 intention"] -> "3 demandes, 2 annonces et 1 intention".
 function joinFrenchList(items) {
