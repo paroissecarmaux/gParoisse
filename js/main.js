@@ -83,6 +83,7 @@ async function init() {
     initClochersEvents();
     initPersonnelEvents();
     initIntentionsEvents();
+    initTrashEvents();
     initOverviewEvents();
     initAgendaEvents();
     initSettingsEvents();
@@ -116,6 +117,7 @@ async function init() {
         renderPersonnelSummary();
         renderIntentionsList();
         renderIntentionsSummary();
+        renderTrash();
         renderOverview();
         renderAgenda();
         toast("Secrétariat prêt.", "success");

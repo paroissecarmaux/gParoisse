@@ -97,6 +97,9 @@
         </button>
     </nav>
     <div class="sidebar-footer">
+        <button class="nav-item" data-page="trash" type="button" aria-selected="false">
+            <svg class="icon"><use href="#i-trash"></use></svg> Corbeille
+        </button>
         <button class="nav-item" data-page="settings" type="button" aria-selected="false">
             <svg class="icon"><use href="#i-settings"></use></svg> Paramètres
         </button>
@@ -1473,6 +1476,25 @@
 <!-- ============================================================
      PARAMÈTRES
 ============================================================ -->
+<div class="view-page" data-page="trash" hidden>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Corbeille</h2>
+            <p class="page-description">Éléments mis à la corbeille, tous modules confondus. Restaurez-les ou supprimez-les définitivement.</p>
+        </div>
+        <div class="settings-actions">
+            <span id="trashResultCount" class="page-description"></span>
+        </div>
+    </div>
+
+    <div id="trashList" class="request-list" role="list"></div>
+
+</div>
+
+<!-- ============================================================
+     PARAMÈTRES
+============================================================ -->
 <div class="view-page" data-page="settings" hidden>
 
     <div class="page-header">
@@ -1611,6 +1633,7 @@
 <script src="js/clochers.js"></script>
 <script src="js/personnel.js"></script>
 <script src="js/intentions.js"></script>
+<script src="js/trash.js"></script>
 <script src="js/overview.js"></script>
 <script src="js/agenda.js"></script>
 <script src="js/settings.js"></script>

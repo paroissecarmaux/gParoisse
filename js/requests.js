@@ -547,6 +547,7 @@ async function trashRequest(id) {
         renderRequests();
         renderOverview();
         renderAgenda();
+        renderTrash();
         toast("Demande mise à la corbeille.", "success");
         showPage("requests");
     } catch (err) {
@@ -569,6 +570,7 @@ async function restoreRequest(id) {
         renderRequests();
         renderOverview();
         renderAgenda();
+        renderTrash();
         toast("Demande restaurée.", "success");
     } catch (err) {
         Logger.error("requests.restoreRequest", err);
@@ -592,6 +594,7 @@ async function purgeRequest(id) {
         renderRequests();
         renderOverview();
         renderAgenda();
+        renderTrash();
         toast("Demande supprimée définitivement.", "success");
     } catch (err) {
         Logger.error("requests.purgeRequest", err);
