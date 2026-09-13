@@ -61,13 +61,24 @@ manifest.json         Manifeste PWA (nom, icônes, thème, mode standalone)
 sw.js                 Service worker minimal (cache de l'app shell, hors ligne réel)
 icons/icon.svg        Icône de l'application (PWA / favicon)
 css/style.css         Tous les styles (palette, typographie, composants)
+tests/                Tests automatisés (voir docs/TESTS.md) — `node tests/pure-functions.test.js`
 
 js/vendor/dexie.min.js   Dexie.js vendorisé en local (IndexedDB)
 js/db.js                 Schéma Dexie (IndexedDB), versionné et additif
 js/constants.js          Vocabulaire métier partagé (types de demande, statuts,
                           priorités, catégories d'annonces, certificats…)
 js/utils.js               Utilitaires génériques (dates, texte, DOM, pagination,
-                           autocomplete, toast, fiche…)
+                           autocomplete, toast, fiche, corbeille, verrous anti-double-clic…)
+
+js/core/errors.js         ValidationError / NotFoundError
+js/core/logger.js         Journalisation (ne journalise jamais un enregistrement personnel)
+js/core/history.js        Historique généralisé (addHistory, withHistoryTx — écriture
+                           métier + historique dans une même transaction Dexie)
+js/core/backup.js         Détection/validation du format de sauvegarde JSON
+
+js/repositories/*.js      Une enveloppe par table Dexie (list/get/put/remove/bulkPut/
+                          clear, + listActive()/listDeleted() pour la corbeille)
+
 js/icons.js                Aide pour référencer une icône du sprite SVG depuis le JS
 js/csv.js                   Parsing CSV générique (délimiteur, dates FR, dates Excel)
 js/state.js                  État partagé, navigation plein écran, thème
@@ -78,16 +89,25 @@ js/schedule.js                   Module « Annonces » (horaires récurrents/pon
 js/clochers.js                    Module « Clochers » (référentiel des lieux)
 js/personnel.js                    Module « Personnel » (bénévoles, salariés, clergé)
 js/intentions.js                    Module « Intentions de messe » (défunts, neuvaines…)
+js/trash.js                          Vue Corbeille unifiée (agrège les 6 modules ci-dessus)
 js/overview.js                       Module « Tableau de bord » (vue d'ensemble)
 js/agenda.js                           Module « Agenda » (vue semaine/jour)
 js/settings.js                          Paramètres, export/import (JSON + CSV), effacement
 js/search.js                             Recherche globale (Ctrl+K / palette de commandes)
+js/diagnostics.js                         Diagnostic d'intégrité des données, à la demande
 
 js/main.js                            Initialisation, raccourcis clavier, câblage global,
                                        enregistrement du service worker
 
 scripts/push.ps1       Script PowerShell de publication (commit + push GitHub)
 ```
+
+Chaque module métier (demandes, membres, annonces, clochers, personnel,
+intentions) suit le même cycle de vie pour ses fiches : créer/modifier
+(historisé), mettre à la corbeille (réversible, disparaît des listes/
+recherches/KPI), restaurer (même id, aucune recréation), ou supprimer
+définitivement depuis la Corbeille (irréversible). Voir
+`docs/DATABASE.md` et `docs/V6.2-C-IMPLEMENTATION.md` pour le détail.
 
 ### Identité visuelle
 
@@ -121,8 +141,16 @@ enregistrées lors d'une mise à jour de l'application.
 Chaque base peut être exportée et réimportée :
 
 - **Export/Import JSON complet** (Paramètres, ou bouton « Sauvegarde ») :
-  sauvegarde/restauration de l'intégralité des données en une fois. C'est le
-  format à utiliser pour une sauvegarde régulière (voir ci-dessus).
+  sauvegarde/restauration de l'intégralité des données en une fois (actifs et
+  corbeille, plus l'historique). Format structuré et versionné (voir
+  `docs/BACKUP.md`) — un fichier qui ne correspond à aucun format de
+  sauvegarde reconnu est rejeté avec un message clair plutôt qu'importé à
+  moitié. C'est le format à utiliser pour une sauvegarde régulière (voir
+  ci-dessus).
+- **Diagnostic des données** (Paramètres → « Vérifier l'intégrité des
+  données ») : repère à la demande les liens vers une fiche définitivement
+  supprimée, les valeurs hors vocabulaire connu, les dates invalides et les
+  doublons probables. Ne modifie jamais rien — un simple repérage.
 - **Export/Import CSV, base par base** (Paramètres, ou directement dans
   l'en-tête de chaque section) : pratique pour relire/modifier les données
   dans un tableur. La colonne « ID » de l'export permet, en cas de
