@@ -258,7 +258,8 @@ const DATA_MODULES = [
             { key: "dateDebut", header: "Début", type: "date" },
             { key: "dateFin", header: "Fin", type: "date" },
             { key: "notes", header: "Notes" },
-            { key: "active", header: "Active", type: "bool" }
+            { key: "active", header: "Active", type: "bool" },
+            { key: "deletedAt", header: "Supprimé(e) le (corbeille)" }
         ]
     },
     {

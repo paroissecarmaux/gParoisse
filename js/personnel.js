@@ -8,7 +8,8 @@
    intention de messe) via setupAutocomplete().
 ============================================================ */
 async function loadPersonnelData() {
-    state.personnel = await PersonnelRepository.list();
+    state.personnel = await PersonnelRepository.listActive();
+    state.personnelTrash = await PersonnelRepository.listDeleted();
 }
 
 function renderPersonnelFormOptions() {
@@ -98,7 +99,7 @@ function renderPersonnelCard(p) {
             </div>
             <div class="request-actions">
                 <button class="icon-btn" data-action="edit" title="Modifier" aria-label="Modifier">${icon("edit")}</button>
-                <button class="icon-btn" data-action="delete" title="Supprimer" aria-label="Supprimer">${icon("trash")}</button>
+                <button class="icon-btn" data-action="delete" title="Mettre à la corbeille" aria-label="Mettre à la corbeille">${icon("trash")}</button>
             </div>
         </article>
     `;
@@ -180,6 +181,7 @@ async function savePersonnel(e) {
 
     try {
         await PersonnelRepository.put(personnel);
+        await addHistory("personnel", personnel.id, existing ? "update" : "create", existing ? "Fiche modifiée" : "Fiche créée");
         await loadPersonnelData();
         renderPersonnelList();
         renderPersonnelSummary();
@@ -249,6 +251,7 @@ function showPersonnelDetail(id) {
                 `).join("")}</div>`
                 : `<div class="empty">Aucune intention liée à cette fiche.</div>`}
         </div>
+        ${historySectionHTML("personnel", id)}
     `;
 
     $("#personnelDetailToggleBtn").innerHTML = p.active
@@ -263,6 +266,7 @@ async function togglePersonnelActive(id) {
     p.active = !p.active;
     p.updatedAt = nowISO();
     await PersonnelRepository.put(p);
+    await addHistory("personnel", id, p.active ? "restore" : "archive", p.active ? "Fiche réactivée" : "Fiche désactivée");
     await loadPersonnelData();
     renderPersonnelList();
     renderPersonnelSummary();
@@ -279,22 +283,70 @@ function personnelLinkedRecordsWarning(p) {
     ]);
 }
 
-async function deletePersonnel(id) {
+/* ============================================================
+   CORBEILLE (V6.2.c) — même principe que js/requests.js. Les
+   intentions qui référencent cette personne comme célébrant gardent
+   leur personnelId intact (voir findLinked() dans js/utils.js).
+============================================================ */
+async function trashPersonnel(id) {
     const p = state.personnel.find(x => x.id === id);
     if (!p) return;
     const warning = personnelLinkedRecordsWarning(p);
-    if (!window.confirm(`${warning}\n\nSupprimer définitivement la fiche de ${p.prenom} ${p.nom} ?\n\nCette action est irréversible.`)) return;
+    if (!window.confirm(`${warning}\n\nMettre à la corbeille la fiche de ${p.prenom} ${p.nom} ?\n\nElle pourra être restaurée depuis la Corbeille.`)) return;
 
     try {
-        await PersonnelRepository.remove(id);
+        p.deletedAt = nowISO();
+        p.updatedAt = nowISO();
+        await PersonnelRepository.put(p);
+        await addHistory("personnel", id, "trash", "Fiche mise à la corbeille");
         await loadPersonnelData();
         renderPersonnelList();
         renderPersonnelSummary();
-        toast("Fiche supprimée.", "success");
+        renderTrash();
+        toast("Fiche mise à la corbeille.", "success");
         showPage("personnel");
     } catch (err) {
-        Logger.error("personnel.deletePersonnel", err);
-        toast("Impossible de supprimer cette fiche.", "error");
+        Logger.error("personnel.trashPersonnel", err);
+        toast("Impossible de mettre cette fiche à la corbeille.", "error");
+    }
+}
+
+async function restorePersonnel(id) {
+    const p = state.personnelTrash.find(x => x.id === id);
+    if (!p) return;
+
+    try {
+        p.deletedAt = null;
+        p.updatedAt = nowISO();
+        await PersonnelRepository.put(p);
+        await addHistory("personnel", id, "restore", "Fiche restaurée depuis la corbeille");
+        await loadPersonnelData();
+        renderPersonnelList();
+        renderPersonnelSummary();
+        renderTrash();
+        toast("Fiche restaurée.", "success");
+    } catch (err) {
+        Logger.error("personnel.restorePersonnel", err);
+        toast("Impossible de restaurer cette fiche.", "error");
+    }
+}
+
+async function purgePersonnel(id) {
+    const p = state.personnelTrash.find(x => x.id === id);
+    if (!p) return;
+    if (!window.confirm(`Supprimer définitivement la fiche de ${p.prenom} ${p.nom} ?\n\nCette action est IRRÉVERSIBLE : la fiche ne pourra plus être restaurée.`)) return;
+
+    try {
+        await PersonnelRepository.remove(id);
+        await addHistory("personnel", id, "purge", "Fiche supprimée définitivement");
+        await loadPersonnelData();
+        renderPersonnelList();
+        renderPersonnelSummary();
+        renderTrash();
+        toast("Fiche supprimée définitivement.", "success");
+    } catch (err) {
+        Logger.error("personnel.purgePersonnel", err);
+        toast("Impossible de supprimer définitivement cette fiche.", "error");
     }
 }
 
@@ -315,7 +367,7 @@ function initPersonnelEvents() {
     $("#personnelDetailBackBtn").addEventListener("click", goBack);
     $("#personnelEditBtn").addEventListener("click", () => state.selectedPersonnelId && showPersonnelForm(state.selectedPersonnelId));
     $("#personnelDetailToggleBtn").addEventListener("click", () => state.selectedPersonnelId && togglePersonnelActive(state.selectedPersonnelId));
-    $("#personnelDeleteBtn").addEventListener("click", () => state.selectedPersonnelId && deletePersonnel(state.selectedPersonnelId));
+    $("#personnelDeleteBtn").addEventListener("click", () => state.selectedPersonnelId && trashPersonnel(state.selectedPersonnelId));
 
     $("#personnelDetailBody").addEventListener("click", e => {
         const item = e.target.closest("[data-intention-id]");
@@ -332,7 +384,7 @@ function initPersonnelEvents() {
 
         switch (btn.dataset.action) {
             case "edit": showPersonnelForm(id); break;
-            case "delete": deletePersonnel(id); break;
+            case "delete": trashPersonnel(id); break;
         }
     });
 }
