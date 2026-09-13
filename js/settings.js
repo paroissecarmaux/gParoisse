@@ -91,6 +91,10 @@ function renderBackupStatus() {
                        vaut "bool" (Oui/Non) ou "date" (tolère ISO,
                        jj/mm/aaaa, ou un numéro de série Excel), sinon
                        le texte est copié tel quel
+   - requiredLabel   : (V6.2.b) description courte du champ qui rend
+                       une ligne exploitable, utilisée dans le rapport
+                       d'import pour expliquer pourquoi une ligne a
+                       été ignorée (« <requiredLabel> manquant »)
 ============================================================ */
 const DATA_MODULES = [
     {
@@ -100,6 +104,7 @@ const DATA_MODULES = [
         stateKey: "requests",
         normalize: normalizeRequest,
         isValid: r => Boolean(r && (r.name || r.description || r.contact)),
+        requiredLabel: "Nom, description ou contact",
         load: loadRequestsData,
         render: () => { renderRequestsSummary(); renderRequests(); },
         createDefault: createDefaultRequest,
@@ -133,6 +138,7 @@ const DATA_MODULES = [
         stateKey: "people",
         normalize: p => ({ ...p, id: String(p.id || uid()) }),
         isValid: p => Boolean(p && (p.prenom || p.nom)),
+        requiredLabel: "Prénom ou nom",
         load: loadPeopleData,
         render: () => { renderPeopleSummary(); renderPeopleList(); },
         createDefault: createDefaultPerson,
@@ -178,6 +184,7 @@ const DATA_MODULES = [
         stateKey: "schedule",
         normalize: s => ({ ...s, id: String(s.id || uid()) }),
         isValid: s => Boolean(s && s.title),
+        requiredLabel: "Titre",
         load: loadScheduleData,
         render: () => { renderScheduleSummary(); renderScheduleList(); },
         createDefault: createDefaultSchedule,
@@ -202,6 +209,7 @@ const DATA_MODULES = [
         stateKey: "clochers",
         normalize: c => ({ ...c, id: String(c.id || uid()) }),
         isValid: c => Boolean(c && c.nom),
+        requiredLabel: "Nom",
         load: loadClochersData,
         render: () => { renderClochersSummary(); renderClochersList(); },
         createDefault: createDefaultClocher,
@@ -224,6 +232,7 @@ const DATA_MODULES = [
         stateKey: "personnel",
         normalize: p => ({ ...p, id: String(p.id || uid()) }),
         isValid: p => Boolean(p && (p.prenom || p.nom)),
+        requiredLabel: "Prénom ou nom",
         load: loadPersonnelData,
         render: () => { renderPersonnelSummary(); renderPersonnelList(); },
         createDefault: createDefaultPersonnel,
@@ -250,6 +259,7 @@ const DATA_MODULES = [
         stateKey: "intentions",
         normalize: i => ({ ...i, id: String(i.id || uid()) }),
         isValid: i => Boolean(i && i.intitule),
+        requiredLabel: "Intitulé",
         load: loadIntentionsData,
         render: () => { renderIntentionsSummary(); renderIntentionsList(); },
         createDefault: createDefaultIntention,
@@ -338,11 +348,23 @@ async function importModuleCSVFile(file) {
 
         const now = nowISO();
         const records = [];
-        let skipped = 0;
+        const skippedLines = [];
+        const dateWarnings = [];
 
         for (let i = 1; i < rows.length; i++) {
+            const line = i + 1; // ligne 1 = en-tête
             const raw = {};
-            fieldForCol.forEach((f, idx) => { if (f) raw[f.key] = csvValueToField(rows[i][idx], f); });
+            fieldForCol.forEach((f, idx) => {
+                if (!f) return;
+                const cell = rows[i][idx];
+                raw[f.key] = csvValueToField(cell, f);
+                if (f.type === "date") {
+                    const trimmed = String(cell ?? "").trim();
+                    if (trimmed && !parseFrenchDate(trimmed)) {
+                        dateWarnings.push({ line, field: f.header, value: trimmed });
+                    }
+                }
+            });
 
             const existing = raw.id ? state[m.stateKey].find(x => x.id === raw.id) : null;
             const record = m.normalize({ ...(existing || m.createDefault()), ...raw });
@@ -350,7 +372,10 @@ async function importModuleCSVFile(file) {
             record.updatedAt = now;
             if (!record.createdAt) record.createdAt = now;
 
-            if (!m.isValid(record)) { skipped++; continue; }
+            if (!m.isValid(record)) {
+                skippedLines.push({ line, reason: `${m.requiredLabel} manquant` });
+                continue;
+            }
             records.push(record);
         }
 
@@ -361,10 +386,17 @@ async function importModuleCSVFile(file) {
         m.render();
         renderOverview();
         renderAgenda();
-        toast(`${records.length} ${m.label} importé(s) depuis le CSV${skipped ? ` · ${skipped} ligne(s) ignorée(s)` : ""}.`, "success");
+        toast(`${records.length} ${m.label} importé(s) depuis le CSV${skippedLines.length ? ` · ${skippedLines.length} ligne(s) ignorée(s)` : ""}.`, "success");
+        renderImportReport({
+            importedCount: records.length,
+            label: m.label,
+            skipped: skippedLines,
+            warnings: dateWarnings
+        });
     } catch (err) {
         Logger.error("settings.importModuleCSVFile", err);
         toast("Import CSV impossible : " + err.message, "error");
+        renderImportReport({ error: err.message });
     }
 }
 

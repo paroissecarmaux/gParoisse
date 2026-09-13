@@ -142,6 +142,36 @@ function sortByKey(arr, keyFn) {
 }
 
 /* ============================================================
+   AVERTISSEMENT DE SUPPRESSION (V6.2.a)
+   Avant de supprimer une Personne/un Clocher/un Personnel, on
+   avertit des enregistrements qui la/le référencent ailleurs (ex.
+   requests.personId) sans jamais y toucher : le lien restera tel
+   quel, simplement orphelin (comportement déjà géré à l'affichage,
+   ex. « Personne introuvable (supprimée) »). `countByField` prend le
+   tableau en paramètre plutôt que de lire `state` directement, pour
+   rester une fonction pure et testable indépendamment du reste.
+============================================================ */
+function countByField(array, field, id) {
+    return (array || []).filter(item => item[field] === id).length;
+}
+
+// Assemble ["3 demandes", "1 intention"] -> "3 demandes et 1 intention"
+// ou ["3 demandes", "2 annonces", "1 intention"] -> "3 demandes, 2 annonces et 1 intention".
+function joinFrenchList(items) {
+    if (items.length <= 1) return items.join("");
+    return `${items.slice(0, -1).join(", ")} et ${items[items.length - 1]}`;
+}
+
+// parts: [{ label: "demande", count: 3 }, ...] -> phrase complète prête à
+// insérer dans un window.confirm(), y compris quand rien n'est lié.
+function describeLinkedRecords(parts) {
+    const active = parts.filter(p => p.count > 0);
+    if (!active.length) return "Aucune donnée liée à cette fiche.";
+    const phrases = active.map(p => `${p.count} ${p.label}${p.count > 1 ? "s" : ""}`);
+    return `Cette fiche est liée à ${joinFrenchList(phrases)}. Si vous continuez, ces liens seront conservés mais ne pointeront plus vers une fiche existante.`;
+}
+
+/* ============================================================
    FICHE (pages détail) : bloc label/valeur réutilisé par tous
    les modules pour afficher un champ dans une section .fiche-grid
 ============================================================ */
@@ -254,4 +284,57 @@ function toast(msg, type = "") {
         el.classList.add("toast-out");
         setTimeout(() => el.remove(), 200);
     }, 3400);
+}
+
+/* ============================================================
+   RAPPORT D'IMPORT CSV (V6.2.b)
+   Le toast garde le résumé bref habituel ; ce panneau (fermable,
+   pas une modale) donne le détail ligne par ligne quand une ligne a
+   été ignorée ou qu'une date n'a pas pu être reconnue — sans changer
+   quelles lignes réussissent ou échouent, seulement en expliquant
+   pourquoi. `report` : { importedCount, label, skipped: [{line,
+   reason}], warnings: [{line, field, value}] } ou { error } en cas
+   d'échec complet de l'import.
+============================================================ */
+function buildImportReportHTML(report) {
+    if (report.error) {
+        return `<div class="import-report-error">${icon("alert-triangle", "icon-inline")}${escapeHTML(report.error)}</div>`;
+    }
+
+    const skipped = report.skipped || [];
+    const warnings = report.warnings || [];
+    const parts = [
+        `<div class="import-report-summary">${icon("check-circle", "icon-inline")}${report.importedCount} ${escapeHTML(report.label || "ligne(s)")} importée(s)${skipped.length ? ` · ${skipped.length} ignorée(s)` : ""}${warnings.length ? ` · ${warnings.length} date(s) non reconnue(s)` : ""}</div>`
+    ];
+
+    if (skipped.length) {
+        parts.push(`
+            <details class="import-report-details">
+                <summary>Voir le détail des lignes ignorées (${skipped.length})</summary>
+                <ul class="import-report-list">
+                    ${skipped.map(s => `<li><strong>Ligne ${s.line}</strong> — ${escapeHTML(s.reason)}</li>`).join("")}
+                </ul>
+            </details>
+        `);
+    }
+
+    if (warnings.length) {
+        parts.push(`
+            <details class="import-report-details">
+                <summary>Voir le détail des dates non reconnues (${warnings.length})</summary>
+                <ul class="import-report-list">
+                    ${warnings.map(w => `<li><strong>Ligne ${w.line}</strong> — ${escapeHTML(w.field)} : « ${escapeHTML(w.value)} » non reconnue comme une date</li>`).join("")}
+                </ul>
+            </details>
+        `);
+    }
+
+    return parts.join("");
+}
+
+function renderImportReport(report) {
+    const panel = $("#importReportPanel");
+    if (!panel) return;
+    $("#importReportBody").innerHTML = buildImportReportHTML(report);
+    panel.hidden = false;
 }

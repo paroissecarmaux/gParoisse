@@ -1577,6 +1577,16 @@
 <input type="file" id="importCsvFile" accept=".csv,text/csv" hidden>
 <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
+<!-- Rapport d'import détaillé (V6.2.b) : panneau autonome, pas une
+     modale — cohérent avec le reste de l'app (aucun popup). Reste
+     affiché tant qu'il n'est pas fermé, quelle que soit la page. -->
+<section class="import-report-panel" id="importReportPanel" role="status" aria-live="polite" hidden>
+    <button type="button" class="import-report-close" id="importReportCloseBtn" aria-label="Fermer le rapport d'import">
+        <svg class="icon"><use href="#i-x-circle"></use></svg>
+    </button>
+    <div id="importReportBody"></div>
+</section>
+
 <script src="js/db.js"></script>
 <script src="js/constants.js"></script>
 <script src="js/utils.js"></script>

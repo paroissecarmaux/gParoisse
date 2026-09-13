@@ -11,6 +11,8 @@ function initGlobalEvents() {
     });
     $("#sidebarBackdrop").addEventListener("click", closeSidebar);
 
+    $("#importReportCloseBtn").addEventListener("click", () => { $("#importReportPanel").hidden = true; });
+
     // Boutons export/import CSV par base : présents à la fois dans les
     // Paramètres et directement dans l'en-tête de chaque module, d'où un
     // seul gestionnaire délégué sur le document plutôt qu'un par page.

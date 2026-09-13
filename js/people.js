@@ -567,10 +567,20 @@ function createIntentionForPerson(id) {
     $("#intentionContact").value = p.telephone || p.email || "";
 }
 
+// Compte les demandes/intentions qui référencent cette personne (V6.2.a) :
+// on n'y touche pas, on avertit seulement avant la suppression définitive.
+function personLinkedRecordsWarning(p) {
+    return describeLinkedRecords([
+        { label: "demande", count: countByField(state.requests, "personId", p.id) },
+        { label: "intention", count: countByField(state.intentions, "personId", p.id) }
+    ]);
+}
+
 async function deletePerson(id) {
     const p = state.people.find(x => x.id === id);
     if (!p) return;
-    if (!window.confirm(`Supprimer définitivement la fiche de ${p.prenom} ${p.nom} ?\n\nCette action est irréversible.`)) return;
+    const warning = personLinkedRecordsWarning(p);
+    if (!window.confirm(`${warning}\n\nSupprimer définitivement la fiche de ${p.prenom} ${p.nom} ?\n\nCette action est irréversible.`)) return;
 
     try {
         await PeopleRepository.remove(id);
@@ -638,10 +648,12 @@ async function importPeopleCSV(file) {
         if (!fieldKeys.some(Boolean)) throw new ValidationError("Aucune colonne reconnue dans l'en-tête du fichier.");
 
         const now = nowISO();
-        let skipped = 0;
+        const skippedLines = [];
+        const dateWarnings = [];
         const toInsert = [];
 
         for (let i = 1; i < rows.length; i++) {
+            const line = i + 1; // ligne 1 = en-tête
             const cols = rows[i];
             const person = { id: uid(), prenom: "", nom: "" };
 
@@ -649,10 +661,19 @@ async function importPeopleCSV(file) {
                 if (!key) return;
                 const raw = (cols[idx] || "").trim();
                 if (!raw) return;
-                person[key] = CSV_DATE_FIELDS.includes(key) ? parseFrenchDate(raw) : raw;
+                if (CSV_DATE_FIELDS.includes(key)) {
+                    const parsed = parseFrenchDate(raw);
+                    if (!parsed) dateWarnings.push({ line, field: key, value: raw });
+                    person[key] = parsed;
+                } else {
+                    person[key] = raw;
+                }
             });
 
-            if (!person.prenom && !person.nom) { skipped++; continue; }
+            if (!person.prenom && !person.nom) {
+                skippedLines.push({ line, reason: "Prénom ou nom manquant" });
+                continue;
+            }
 
             person.createdAt = now;
             person.updatedAt = now;
@@ -669,10 +690,17 @@ async function importPeopleCSV(file) {
         renderPeopleList();
         renderPeopleSummary();
         renderOverview();
-        toast(`${toInsert.length} personne(s) importée(s)${skipped ? ` · ${skipped} ligne(s) ignorée(s)` : ""}.`, "success");
+        toast(`${toInsert.length} personne(s) importée(s)${skippedLines.length ? ` · ${skippedLines.length} ligne(s) ignorée(s)` : ""}.`, "success");
+        renderImportReport({
+            importedCount: toInsert.length,
+            label: "personne(s)",
+            skipped: skippedLines,
+            warnings: dateWarnings
+        });
     } catch (err) {
         Logger.error("people.importPeopleCSV", err);
         toast("Import CSV impossible : " + err.message, "error");
+        renderImportReport({ error: err.message });
     }
 }
 

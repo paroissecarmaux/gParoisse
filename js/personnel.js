@@ -270,10 +270,20 @@ async function togglePersonnelActive(id) {
     toast(p.active ? "Fiche réactivée." : "Fiche désactivée.", "success");
 }
 
+// Compte les intentions de messe où cette personne est célébrant (V6.2.a) :
+// on n'y touche pas, on avertit seulement avant suppression définitive.
+// Réutilise relatedIntentionsFor(), déjà utilisée pour l'affichage de la fiche.
+function personnelLinkedRecordsWarning(p) {
+    return describeLinkedRecords([
+        { label: "intention", count: relatedIntentionsFor(p).length }
+    ]);
+}
+
 async function deletePersonnel(id) {
     const p = state.personnel.find(x => x.id === id);
     if (!p) return;
-    if (!window.confirm(`Supprimer définitivement la fiche de ${p.prenom} ${p.nom} ?\n\nCette action est irréversible.`)) return;
+    const warning = personnelLinkedRecordsWarning(p);
+    if (!window.confirm(`${warning}\n\nSupprimer définitivement la fiche de ${p.prenom} ${p.nom} ?\n\nCette action est irréversible.`)) return;
 
     try {
         await PersonnelRepository.remove(id);

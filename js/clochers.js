@@ -224,10 +224,21 @@ async function toggleClocherActive(id) {
     toast(c.active ? "Clocher réactivé." : "Clocher désactivé.", "success");
 }
 
+// Compte les demandes/annonces/intentions qui référencent ce clocher
+// (V6.2.a) : on n'y touche pas, on avertit seulement avant suppression.
+function clocherLinkedRecordsWarning(c) {
+    return describeLinkedRecords([
+        { label: "demande", count: countByField(state.requests, "clocherId", c.id) },
+        { label: "annonce", count: countByField(state.schedule, "clocherId", c.id) },
+        { label: "intention", count: countByField(state.intentions, "clocherId", c.id) }
+    ]);
+}
+
 async function deleteClocher(id) {
     const c = state.clochers.find(x => x.id === id);
     if (!c) return;
-    if (!window.confirm(`Supprimer définitivement « ${c.nom} » ?\n\nCette action est irréversible.`)) return;
+    const warning = clocherLinkedRecordsWarning(c);
+    if (!window.confirm(`${warning}\n\nSupprimer définitivement « ${c.nom} » ?\n\nCette action est irréversible.`)) return;
 
     try {
         await ClochersRepository.remove(id);
