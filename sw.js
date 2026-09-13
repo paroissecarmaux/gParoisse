@@ -14,7 +14,7 @@
    dans js/main.js). Ce cache ne s'active que si l'app est servie
    via http(s) (serveur local, hébergement statique…).
 ============================================================ */
-const CACHE_NAME = "paroisse-secretariat-v5";
+const CACHE_NAME = "paroisse-secretariat-v6";
 
 const PRECACHE_URLS = [
     "./",
@@ -29,6 +29,7 @@ const PRECACHE_URLS = [
     "./js/constants.js",
     "./js/core/errors.js",
     "./js/core/logger.js",
+    "./js/core/backup.js",
     "./js/repositories/repositoryFactory.js",
     "./js/repositories/requestsRepository.js",
     "./js/repositories/peopleRepository.js",

@@ -7,6 +7,14 @@
    ajuster un type de demande, une catégorie d'annonce, etc.).
 ============================================================ */
 
+/* --- Version applicative (V6.3) ---
+   Suit la numérotation de la feuille de route (docs/ROADMAP.md), pas
+   un numéro de build automatique — le projet n'a pas d'étape de build.
+   Utilisée uniquement dans le format de sauvegarde JSON (appVersion),
+   à titre indicatif pour le diagnostic, jamais comme critère de
+   validation (databaseVersion, ci-dessous côté import, en est un). */
+const APP_VERSION = "6.3.0";
+
 /* --- Demandes --- */
 const REQUEST_TYPES = [
     "Certificat de baptême", "Certificat de mariage", "Certificat de décès",

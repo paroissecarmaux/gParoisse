@@ -1509,8 +1509,10 @@
             <h3 class="settings-title">Sauvegarde des données</h3>
             <p class="settings-description">
                 Les données sont stockées <strong>uniquement dans ce navigateur</strong> (aucun serveur, aucune
-                synchronisation). Une exportation JSON régulière est indispensable : c'est le seul moyen de les
-                récupérer en cas de problème.
+                synchronisation). <strong>Cette copie locale n'est pas une sauvegarde</strong> : perdre ou
+                réinitialiser cet appareil (ou vider les données du navigateur) perd tout. Seul un export JSON
+                enregistré <strong>ailleurs</strong> (clé USB, autre ordinateur, cloud) protège contre cette perte —
+                faites-en un régulièrement.
             </p>
             <div id="settingsBackupStatus"></div>
             <div class="settings-actions">
@@ -1616,6 +1618,7 @@
 <script src="js/csv.js"></script>
 <script src="js/core/errors.js"></script>
 <script src="js/core/logger.js"></script>
+<script src="js/core/backup.js"></script>
 <script src="js/repositories/repositoryFactory.js"></script>
 <script src="js/repositories/requestsRepository.js"></script>
 <script src="js/repositories/peopleRepository.js"></script>

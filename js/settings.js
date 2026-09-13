@@ -302,14 +302,38 @@ function allRecordsFor(m) {
     return state[m.stateKey].concat(state[m.trashKey] || []);
 }
 
+/* ============================================================
+   FORMAT DE SAUVEGARDE (V6.3)
+   Remplace l'ancienne structure plate ({app, version, exportedAt,
+   requests: [...], people: [...], ...}) par un objet dédié explicite,
+   plus facile à valider strictement à l'import (voir importFile()) :
+
+   { format: "gparoisse-backup", formatVersion: 1, appVersion,
+     databaseVersion, createdAt, settings, data: { requests: [...],
+     ..., history: [...] } }
+
+   L'ancien format plat reste lisible en import (rétrocompatibilité),
+   voir detectBackupPayload() (js/core/backup.js) — mais n'est plus
+   jamais écrit.
+============================================================ */
 async function exportJSON() {
+    const data = {};
+    DATA_MODULES.forEach(m => { data[m.key] = allRecordsFor(m); });
+    // L'historique n'est pas dans DATA_MODULES (ce n'est pas une entité
+    // "supprimable" au sens de la corbeille), mais une sauvegarde qui se
+    // veut complète doit le contenir : sans lui, restaurer une sauvegarde
+    // perdrait tout le journal d'audit (V6.2.c).
+    data.history = await HistoryRepository.list();
+
     const payload = {
-        app: "Paroisse · Secrétariat",
-        version: 9,
-        exportedAt: nowISO(),
-        settings: state.settings
+        format: BACKUP_FORMAT,
+        formatVersion: BACKUP_FORMAT_VERSION,
+        appVersion: APP_VERSION,
+        databaseVersion: db.verno,
+        createdAt: nowISO(),
+        settings: state.settings,
+        data
     };
-    DATA_MODULES.forEach(m => { payload[m.key] = allRecordsFor(m); });
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
     downloadBlob(blob, `paroisse-sauvegarde-${todayISO()}.json`);
     await saveSetting("lastBackup", nowISO());
@@ -431,14 +455,14 @@ async function importFile(file) {
     if (!file) return;
     try {
         const parsed = JSON.parse(await file.text());
+        const { data, history: importedHistoryRaw } = detectBackupPayload(parsed, DATA_MODULES.map(m => m.key));
 
-        // Rétrocompatibilité : une ancienne sauvegarde pouvait être un
-        // simple tableau de demandes plutôt qu'un objet { requests, ... }.
         const imported = {};
         DATA_MODULES.forEach(m => {
-            const raw = Array.isArray(parsed) ? (m.key === "requests" ? parsed : []) : (parsed[m.key] || []);
+            const raw = Array.isArray(data[m.key]) ? data[m.key] : [];
             imported[m.key] = raw.filter(m.isValid).map(m.normalize);
         });
+        const importedHistory = importedHistoryRaw.filter(h => h && h.id && h.action);
 
         const totalCount = DATA_MODULES.reduce((sum, m) => sum + imported[m.key].length, 0);
         if (!totalCount) throw new ValidationError("Le fichier ne contient aucune donnée exploitable.");
@@ -448,6 +472,7 @@ async function importFile(file) {
         if (state.importMode === "replace") {
             if (!window.confirm(`Remplacer toutes les données actuelles par ${summary} ?`)) return;
             for (const m of DATA_MODULES) await m.table().clear();
+            await HistoryRepository.clear();
         }
 
         // Écritures groupées (bulkPut) plutôt qu'un put() par élément, et
@@ -464,13 +489,20 @@ async function importFile(file) {
         for (const m of DATA_MODULES) {
             if (imported[m.key].length) await m.table().bulkPut(imported[m.key]);
         }
+        // L'historique n'a pas besoin de la même déduplication d'id que les
+        // modules ci-dessus : ses id sont des UUID aléatoires (uid()), une
+        // collision ne peut réalistement survenir qu'en réimportant la même
+        // sauvegarde deux fois — bulkPut la réécrit alors à l'identique.
+        if (importedHistory.length) await HistoryRepository.bulkPut(importedHistory);
 
         state.peoplePage = 1;
         state.requestsPage = 1;
         for (const m of DATA_MODULES) await m.load();
+        state.history = await HistoryRepository.list();
         DATA_MODULES.forEach(m => m.render());
         renderOverview();
         renderAgenda();
+        renderTrash();
         toast(`Import terminé : ${summary}.`, "success");
     } catch (err) {
         Logger.error("settings.importFile", err);
@@ -486,9 +518,11 @@ async function clearDatabase() {
     await HistoryRepository.clear();
     for (const m of DATA_MODULES) await m.table().clear();
     for (const m of DATA_MODULES) await m.load();
+    state.history = await HistoryRepository.list();
     DATA_MODULES.forEach(m => m.render());
     renderOverview();
     renderAgenda();
+    renderTrash();
     toast("Toutes les données ont été supprimées.", "success");
 }
 

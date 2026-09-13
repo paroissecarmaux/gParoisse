@@ -39,7 +39,13 @@ loadScripts(context, [
     // `HistoryRepository`, absents de ce contexte, mais ce n'est un
     // problème que si on les *appelle* — les tests ci-dessous n'exercent
     // que historyEntityType/historyEntityId, réellement pures.
-    "js/core/history.js"
+    "js/core/history.js",
+    "js/core/errors.js",
+    // js/core/backup.js (V6.3) a été isolé de js/settings.js justement
+    // pour rester testable ici sans charger les 6 modules métier que
+    // référence DATA_MODULES — detectBackupPayload() prend sa liste de
+    // clés en paramètre plutôt que de lire DATA_MODULES directement.
+    "js/core/backup.js"
 ]);
 
 let passed = 0;
@@ -389,6 +395,52 @@ test("historyEntityId: entrée récente -> son propre entityId", () => {
 });
 test("historyEntityId: ancienne entrée -> repli sur requestId", () => {
     assert.strictEqual(context.historyEntityId({ requestId: "r1" }), "r1");
+});
+
+/* ---------- js/core/backup.js : détection du format de sauvegarde (V6.3) ---------- */
+
+function expectValidationError(fn) {
+    try {
+        fn();
+    } catch (err) {
+        assert.strictEqual(err.name, "ValidationError", `attendu ValidationError, reçu ${err.name}: ${err.message}`);
+        return;
+    }
+    assert.fail("aucune erreur levée alors qu'une ValidationError était attendue");
+}
+
+test("detectBackupPayload: tout premier format (tableau brut) -> requests", () => {
+    const result = context.detectBackupPayload([{ id: "r1" }], ["requests", "people"]);
+    assert.strictEqual(result.data.requests.length, 1);
+    assertSameStructure(result.history, []);
+});
+test("detectBackupPayload: format structuré V6.3 valide", () => {
+    const parsed = {
+        format: "gparoisse-backup",
+        formatVersion: 1,
+        data: { requests: [{ id: "r1" }], history: [{ id: "h1", action: "create" }] }
+    };
+    const result = context.detectBackupPayload(parsed, ["requests", "people"]);
+    assert.strictEqual(result.data.requests.length, 1);
+    assert.strictEqual(result.history.length, 1);
+});
+test("detectBackupPayload: format structuré, formatVersion inconnu -> ValidationError", () => {
+    expectValidationError(() => context.detectBackupPayload({ format: "gparoisse-backup", formatVersion: 2, data: {} }, ["requests"]));
+});
+test("detectBackupPayload: format structuré, format inattendu -> ValidationError", () => {
+    expectValidationError(() => context.detectBackupPayload({ format: "autre-app", formatVersion: 1, data: {} }, ["requests"]));
+});
+test("detectBackupPayload: format structuré sans data -> ValidationError", () => {
+    expectValidationError(() => context.detectBackupPayload({ format: "gparoisse-backup", formatVersion: 1 }, ["requests"]));
+});
+test("detectBackupPayload: ancien format plat reconnu (au moins une clé de module)", () => {
+    const parsed = { app: "Paroisse · Secrétariat", version: 9, requests: [{ id: "r1" }] };
+    const result = context.detectBackupPayload(parsed, ["requests", "people"]);
+    assert.strictEqual(result.data.requests.length, 1);
+    assertSameStructure(result.history, []);
+});
+test("detectBackupPayload: JSON sans rapport -> ValidationError", () => {
+    expectValidationError(() => context.detectBackupPayload({ foo: "bar" }, ["requests", "people"]));
 });
 
 console.log(`\n${passed} test(s) réussi(s), ${failed} échec(s).`);
