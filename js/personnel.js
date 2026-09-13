@@ -179,19 +179,23 @@ async function savePersonnel(e) {
         updatedAt: now
     };
 
-    try {
-        await PersonnelRepository.put(personnel);
-        await addHistory("personnel", personnel.id, existing ? "update" : "create", existing ? "Fiche modifiée" : "Fiche créée");
-        await loadPersonnelData();
-        renderPersonnelList();
-        renderPersonnelSummary();
-        toast(existing ? "Fiche modifiée." : "Fiche ajoutée.", "success");
-        if (e.submitter?.dataset.action === "save-and-new") showPersonnelForm(null);
-        else showPersonnelDetail(personnel.id);
-    } catch (err) {
-        Logger.error("personnel.savePersonnel", err);
-        toast("Impossible d'enregistrer cette fiche.", "error");
-    }
+    await withSubmitLock(e.target, async () => {
+        try {
+            await withHistoryTx([db.personnel], async () => {
+                await PersonnelRepository.put(personnel);
+                await addHistory("personnel", personnel.id, existing ? "update" : "create", existing ? "Fiche modifiée" : "Fiche créée");
+            });
+            await loadPersonnelData();
+            renderPersonnelList();
+            renderPersonnelSummary();
+            toast(existing ? "Fiche modifiée." : "Fiche ajoutée.", "success");
+            if (e.submitter?.dataset.action === "save-and-new") showPersonnelForm(null);
+            else showPersonnelDetail(personnel.id);
+        } catch (err) {
+            Logger.error("personnel.savePersonnel", err);
+            toast("Impossible d'enregistrer cette fiche.", "error");
+        }
+    });
 }
 
 function relatedIntentionsFor(p) {
@@ -264,15 +268,25 @@ function showPersonnelDetail(id) {
 async function togglePersonnelActive(id) {
     const p = state.personnel.find(x => x.id === id);
     if (!p) return;
-    p.active = !p.active;
-    p.updatedAt = nowISO();
-    await PersonnelRepository.put(p);
-    await addHistory("personnel", id, p.active ? "restore" : "archive", p.active ? "Fiche réactivée" : "Fiche désactivée");
-    await loadPersonnelData();
-    renderPersonnelList();
-    renderPersonnelSummary();
-    showPersonnelDetail(id);
-    toast(p.active ? "Fiche réactivée." : "Fiche désactivée.", "success");
+
+    await withActionLock(`personnel:active:${id}`, async () => {
+        try {
+            await withHistoryTx([db.personnel], async () => {
+                p.active = !p.active;
+                p.updatedAt = nowISO();
+                await PersonnelRepository.put(p);
+                await addHistory("personnel", id, p.active ? "restore" : "archive", p.active ? "Fiche réactivée" : "Fiche désactivée");
+            });
+            await loadPersonnelData();
+            renderPersonnelList();
+            renderPersonnelSummary();
+            showPersonnelDetail(id);
+            toast(p.active ? "Fiche réactivée." : "Fiche désactivée.", "success");
+        } catch (err) {
+            Logger.error("personnel.togglePersonnelActive", err);
+            toast("Impossible de modifier cette fiche.", "error");
+        }
+    });
 }
 
 // Compte les intentions de messe où cette personne est célébrant (V6.2.a) :
@@ -295,41 +309,49 @@ async function trashPersonnel(id) {
     const warning = personnelLinkedRecordsWarning(p);
     if (!window.confirm(`${warning}\n\nMettre à la corbeille la fiche de ${p.prenom} ${p.nom} ?\n\nElle pourra être restaurée depuis la Corbeille.`)) return;
 
-    try {
-        p.deletedAt = nowISO();
-        p.updatedAt = nowISO();
-        await PersonnelRepository.put(p);
-        await addHistory("personnel", id, "trash", "Fiche mise à la corbeille");
-        await loadPersonnelData();
-        renderPersonnelList();
-        renderPersonnelSummary();
-        renderTrash();
-        toast("Fiche mise à la corbeille.", "success");
-        showPage("personnel");
-    } catch (err) {
-        Logger.error("personnel.trashPersonnel", err);
-        toast("Impossible de mettre cette fiche à la corbeille.", "error");
-    }
+    await withActionLock(`personnel:trash:${id}`, async () => {
+        try {
+            await withHistoryTx([db.personnel], async () => {
+                p.deletedAt = nowISO();
+                p.updatedAt = nowISO();
+                await PersonnelRepository.put(p);
+                await addHistory("personnel", id, "trash", "Fiche mise à la corbeille");
+            });
+            await loadPersonnelData();
+            renderPersonnelList();
+            renderPersonnelSummary();
+            renderTrash();
+            toast("Fiche mise à la corbeille.", "success");
+            showPage("personnel");
+        } catch (err) {
+            Logger.error("personnel.trashPersonnel", err);
+            toast("Impossible de mettre cette fiche à la corbeille.", "error");
+        }
+    });
 }
 
 async function restorePersonnel(id) {
     const p = state.personnelTrash.find(x => x.id === id);
     if (!p) return;
 
-    try {
-        p.deletedAt = null;
-        p.updatedAt = nowISO();
-        await PersonnelRepository.put(p);
-        await addHistory("personnel", id, "restore", "Fiche restaurée depuis la corbeille");
-        await loadPersonnelData();
-        renderPersonnelList();
-        renderPersonnelSummary();
-        renderTrash();
-        toast("Fiche restaurée.", "success");
-    } catch (err) {
-        Logger.error("personnel.restorePersonnel", err);
-        toast("Impossible de restaurer cette fiche.", "error");
-    }
+    await withActionLock(`personnel:restore:${id}`, async () => {
+        try {
+            await withHistoryTx([db.personnel], async () => {
+                p.deletedAt = null;
+                p.updatedAt = nowISO();
+                await PersonnelRepository.put(p);
+                await addHistory("personnel", id, "restore", "Fiche restaurée depuis la corbeille");
+            });
+            await loadPersonnelData();
+            renderPersonnelList();
+            renderPersonnelSummary();
+            renderTrash();
+            toast("Fiche restaurée.", "success");
+        } catch (err) {
+            Logger.error("personnel.restorePersonnel", err);
+            toast("Impossible de restaurer cette fiche.", "error");
+        }
+    });
 }
 
 async function purgePersonnel(id) {
@@ -337,18 +359,22 @@ async function purgePersonnel(id) {
     if (!p) return;
     if (!window.confirm(`Supprimer définitivement la fiche de ${p.prenom} ${p.nom} ?\n\nCette action est IRRÉVERSIBLE : la fiche ne pourra plus être restaurée.`)) return;
 
-    try {
-        await PersonnelRepository.remove(id);
-        await addHistory("personnel", id, "purge", "Fiche supprimée définitivement");
-        await loadPersonnelData();
-        renderPersonnelList();
-        renderPersonnelSummary();
-        renderTrash();
-        toast("Fiche supprimée définitivement.", "success");
-    } catch (err) {
-        Logger.error("personnel.purgePersonnel", err);
-        toast("Impossible de supprimer définitivement cette fiche.", "error");
-    }
+    await withActionLock(`personnel:purge:${id}`, async () => {
+        try {
+            await withHistoryTx([db.personnel], async () => {
+                await PersonnelRepository.remove(id);
+                await addHistory("personnel", id, "purge", "Fiche supprimée définitivement");
+            });
+            await loadPersonnelData();
+            renderPersonnelList();
+            renderPersonnelSummary();
+            renderTrash();
+            toast("Fiche supprimée définitivement.", "success");
+        } catch (err) {
+            Logger.error("personnel.purgePersonnel", err);
+            toast("Impossible de supprimer définitivement cette fiche.", "error");
+        }
+    });
 }
 
 /* ============================================================

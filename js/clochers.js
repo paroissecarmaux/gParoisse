@@ -162,19 +162,23 @@ async function saveClocher(e) {
         updatedAt: now
     };
 
-    try {
-        await ClochersRepository.put(clocher);
-        await addHistory("clocher", clocher.id, existing ? "update" : "create", existing ? "Clocher modifié" : "Clocher créé");
-        await loadClochersData();
-        renderClochersList();
-        renderClochersSummary();
-        toast(existing ? "Clocher modifié." : "Clocher ajouté.", "success");
-        if (e.submitter?.dataset.action === "save-and-new") showClocherForm(null);
-        else showClocherDetail(clocher.id);
-    } catch (err) {
-        Logger.error("clochers.saveClocher", err);
-        toast("Impossible d'enregistrer ce clocher.", "error");
-    }
+    await withSubmitLock(e.target, async () => {
+        try {
+            await withHistoryTx([db.clochers], async () => {
+                await ClochersRepository.put(clocher);
+                await addHistory("clocher", clocher.id, existing ? "update" : "create", existing ? "Clocher modifié" : "Clocher créé");
+            });
+            await loadClochersData();
+            renderClochersList();
+            renderClochersSummary();
+            toast(existing ? "Clocher modifié." : "Clocher ajouté.", "success");
+            if (e.submitter?.dataset.action === "save-and-new") showClocherForm(null);
+            else showClocherDetail(clocher.id);
+        } catch (err) {
+            Logger.error("clochers.saveClocher", err);
+            toast("Impossible d'enregistrer ce clocher.", "error");
+        }
+    });
 }
 
 function showClocherDetail(id) {
@@ -218,15 +222,25 @@ function showClocherDetail(id) {
 async function toggleClocherActive(id) {
     const c = state.clochers.find(x => x.id === id);
     if (!c) return;
-    c.active = !c.active;
-    c.updatedAt = nowISO();
-    await ClochersRepository.put(c);
-    await addHistory("clocher", id, c.active ? "restore" : "archive", c.active ? "Clocher réactivé" : "Clocher désactivé");
-    await loadClochersData();
-    renderClochersList();
-    renderClochersSummary();
-    showClocherDetail(id);
-    toast(c.active ? "Clocher réactivé." : "Clocher désactivé.", "success");
+
+    await withActionLock(`clocher:active:${id}`, async () => {
+        try {
+            await withHistoryTx([db.clochers], async () => {
+                c.active = !c.active;
+                c.updatedAt = nowISO();
+                await ClochersRepository.put(c);
+                await addHistory("clocher", id, c.active ? "restore" : "archive", c.active ? "Clocher réactivé" : "Clocher désactivé");
+            });
+            await loadClochersData();
+            renderClochersList();
+            renderClochersSummary();
+            showClocherDetail(id);
+            toast(c.active ? "Clocher réactivé." : "Clocher désactivé.", "success");
+        } catch (err) {
+            Logger.error("clochers.toggleClocherActive", err);
+            toast("Impossible de modifier ce clocher.", "error");
+        }
+    });
 }
 
 // Compte les demandes/annonces/intentions qui référencent ce clocher
@@ -250,41 +264,49 @@ async function trashClocher(id) {
     const warning = clocherLinkedRecordsWarning(c);
     if (!window.confirm(`${warning}\n\nMettre à la corbeille « ${c.nom} » ?\n\nIl pourra être restauré depuis la Corbeille.`)) return;
 
-    try {
-        c.deletedAt = nowISO();
-        c.updatedAt = nowISO();
-        await ClochersRepository.put(c);
-        await addHistory("clocher", id, "trash", "Clocher mis à la corbeille");
-        await loadClochersData();
-        renderClochersList();
-        renderClochersSummary();
-        renderTrash();
-        toast("Clocher mis à la corbeille.", "success");
-        showPage("clochers");
-    } catch (err) {
-        Logger.error("clochers.trashClocher", err);
-        toast("Impossible de mettre ce clocher à la corbeille.", "error");
-    }
+    await withActionLock(`clocher:trash:${id}`, async () => {
+        try {
+            await withHistoryTx([db.clochers], async () => {
+                c.deletedAt = nowISO();
+                c.updatedAt = nowISO();
+                await ClochersRepository.put(c);
+                await addHistory("clocher", id, "trash", "Clocher mis à la corbeille");
+            });
+            await loadClochersData();
+            renderClochersList();
+            renderClochersSummary();
+            renderTrash();
+            toast("Clocher mis à la corbeille.", "success");
+            showPage("clochers");
+        } catch (err) {
+            Logger.error("clochers.trashClocher", err);
+            toast("Impossible de mettre ce clocher à la corbeille.", "error");
+        }
+    });
 }
 
 async function restoreClocher(id) {
     const c = state.clochersTrash.find(x => x.id === id);
     if (!c) return;
 
-    try {
-        c.deletedAt = null;
-        c.updatedAt = nowISO();
-        await ClochersRepository.put(c);
-        await addHistory("clocher", id, "restore", "Clocher restauré depuis la corbeille");
-        await loadClochersData();
-        renderClochersList();
-        renderClochersSummary();
-        renderTrash();
-        toast("Clocher restauré.", "success");
-    } catch (err) {
-        Logger.error("clochers.restoreClocher", err);
-        toast("Impossible de restaurer ce clocher.", "error");
-    }
+    await withActionLock(`clocher:restore:${id}`, async () => {
+        try {
+            await withHistoryTx([db.clochers], async () => {
+                c.deletedAt = null;
+                c.updatedAt = nowISO();
+                await ClochersRepository.put(c);
+                await addHistory("clocher", id, "restore", "Clocher restauré depuis la corbeille");
+            });
+            await loadClochersData();
+            renderClochersList();
+            renderClochersSummary();
+            renderTrash();
+            toast("Clocher restauré.", "success");
+        } catch (err) {
+            Logger.error("clochers.restoreClocher", err);
+            toast("Impossible de restaurer ce clocher.", "error");
+        }
+    });
 }
 
 async function purgeClocher(id) {
@@ -292,18 +314,22 @@ async function purgeClocher(id) {
     if (!c) return;
     if (!window.confirm(`Supprimer définitivement « ${c.nom} » ?\n\nCette action est IRRÉVERSIBLE : la fiche ne pourra plus être restaurée.`)) return;
 
-    try {
-        await ClochersRepository.remove(id);
-        await addHistory("clocher", id, "purge", "Clocher supprimé définitivement");
-        await loadClochersData();
-        renderClochersList();
-        renderClochersSummary();
-        renderTrash();
-        toast("Clocher supprimé définitivement.", "success");
-    } catch (err) {
-        Logger.error("clochers.purgeClocher", err);
-        toast("Impossible de supprimer définitivement ce clocher.", "error");
-    }
+    await withActionLock(`clocher:purge:${id}`, async () => {
+        try {
+            await withHistoryTx([db.clochers], async () => {
+                await ClochersRepository.remove(id);
+                await addHistory("clocher", id, "purge", "Clocher supprimé définitivement");
+            });
+            await loadClochersData();
+            renderClochersList();
+            renderClochersSummary();
+            renderTrash();
+            toast("Clocher supprimé définitivement.", "success");
+        } catch (err) {
+            Logger.error("clochers.purgeClocher", err);
+            toast("Impossible de supprimer définitivement ce clocher.", "error");
+        }
+    });
 }
 
 /* ============================================================
