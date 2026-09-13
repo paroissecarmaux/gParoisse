@@ -102,6 +102,7 @@ async function init() {
     initOverviewEvents();
     initAgendaEvents();
     initSettingsEvents();
+    initDiagnosticsEvents();
     initGlobalSearchEvents();
     initGlobalEvents();
 

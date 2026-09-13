@@ -1550,6 +1550,17 @@
             </div>
         </section>
         <section class="settings-section">
+            <h3 class="settings-title">Diagnostic des données</h3>
+            <p class="settings-description">
+                Recherche les incohérences (lien vers une fiche définitivement supprimée, valeur inconnue,
+                date invalide, doublon possible) dans les données déjà chargées. Ne modifie rien : un simple
+                repérage, à corriger manuellement fiche par fiche si nécessaire.
+            </p>
+            <div class="settings-actions">
+                <button class="btn" id="runIntegrityCheckBtn"><svg class="icon"><use href="#i-search"></use></svg> Vérifier l'intégrité des données</button>
+            </div>
+        </section>
+        <section class="settings-section">
             <h3 class="settings-title">Importation</h3>
             <p class="settings-description">
                 À partir d'une sauvegarde JSON complète : fusionner avec les données actuelles, ou tout remplacer.
@@ -1614,6 +1625,15 @@
     <div id="importReportBody"></div>
 </section>
 
+<!-- Rapport de diagnostic d'intégrité (V6.6) : même gabarit que le
+     rapport d'import ci-dessus, réutilisé à l'identique. -->
+<section class="import-report-panel" id="integrityReportPanel" role="status" aria-live="polite" hidden>
+    <button type="button" class="import-report-close" id="integrityReportCloseBtn" aria-label="Fermer le rapport de diagnostic">
+        <svg class="icon"><use href="#i-x-circle"></use></svg>
+    </button>
+    <div id="integrityReportBody"></div>
+</section>
+
 <script src="js/db.js"></script>
 <script src="js/constants.js"></script>
 <script src="js/utils.js"></script>
@@ -1644,6 +1664,7 @@
 <script src="js/agenda.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/search.js"></script>
+<script src="js/diagnostics.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

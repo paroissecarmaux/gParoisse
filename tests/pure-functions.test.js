@@ -45,7 +45,12 @@ loadScripts(context, [
     // pour rester testable ici sans charger les 6 modules métier que
     // référence DATA_MODULES — detectBackupPayload() prend sa liste de
     // clés en paramètre plutôt que de lire DATA_MODULES directement.
-    "js/core/backup.js"
+    "js/core/backup.js",
+    // js/diagnostics.js (V6.6) lit `state.*` au moment de l'appel, pas au
+    // chargement — safe à charger ici sans js/state.js ; les tests
+    // ci-dessous posent `context.state` manuellement avant d'appeler les
+    // fonctions de vérification.
+    "js/diagnostics.js"
 ]);
 
 let passed = 0;
@@ -441,6 +446,85 @@ test("detectBackupPayload: ancien format plat reconnu (au moins une clé de modu
 });
 test("detectBackupPayload: JSON sans rapport -> ValidationError", () => {
     expectValidationError(() => context.detectBackupPayload({ foo: "bar" }, ["requests", "people"]));
+});
+
+/* ---------- js/diagnostics.js : diagnostic d'intégrité (V6.6) ---------- */
+
+test("isInvalidDateValue: vide -> non invalide (non renseigné)", () => {
+    assert.strictEqual(context.isInvalidDateValue(""), false);
+    assert.strictEqual(context.isInvalidDateValue(null), false);
+    assert.strictEqual(context.isInvalidDateValue(undefined), false);
+});
+test("isInvalidDateValue: date ISO valide -> non invalide", () => {
+    assert.strictEqual(context.isInvalidDateValue("2026-09-13"), false);
+});
+test("isInvalidDateValue: format non ISO -> invalide", () => {
+    assert.strictEqual(context.isInvalidDateValue("13/09/2026"), true);
+});
+test("isInvalidDateValue: date impossible (mois 13) -> invalide", () => {
+    assert.strictEqual(context.isInvalidDateValue("2026-13-40"), true);
+});
+
+test("checkReferenceIntegrity: lien vers une fiche définitivement supprimée -> signalé", () => {
+    context.state = {
+        requests: [{ id: "r1", name: "Dupont", personId: "p-missing", clocherId: "" }],
+        people: [], peopleTrash: [],
+        clochers: [], clochersTrash: [],
+        schedule: [], intentions: [], personnel: [], personnelTrash: []
+    };
+    const findings = context.checkReferenceIntegrity();
+    assert.strictEqual(findings.length, 1);
+    assert.strictEqual(findings[0].entityType, "request");
+});
+test("checkReferenceIntegrity: lien vers une fiche active -> rien signalé", () => {
+    context.state = {
+        requests: [{ id: "r1", name: "Dupont", personId: "p1", clocherId: "" }],
+        people: [{ id: "p1", prenom: "Jean", nom: "Dupont" }], peopleTrash: [],
+        clochers: [], clochersTrash: [],
+        schedule: [], intentions: [], personnel: [], personnelTrash: []
+    };
+    assertSameStructure(context.checkReferenceIntegrity(), []);
+});
+test("checkReferenceIntegrity: lien vers une fiche en corbeille -> rien signalé (restaurable, pas cassé)", () => {
+    context.state = {
+        requests: [{ id: "r1", name: "Dupont", personId: "p1", clocherId: "" }],
+        people: [], peopleTrash: [{ id: "p1", prenom: "Jean", nom: "Dupont" }],
+        clochers: [], clochersTrash: [],
+        schedule: [], intentions: [], personnel: [], personnelTrash: []
+    };
+    assertSameStructure(context.checkReferenceIntegrity(), []);
+});
+
+test("checkEnumValues: statut de demande hors vocabulaire -> signalé", () => {
+    context.state = { requests: [{ id: "r1", name: "Dupont", status: "Statut inventé" }], intentions: [], personnel: [] };
+    const findings = context.checkEnumValues();
+    assert.strictEqual(findings.length, 1);
+    assert.ok(findings[0].message.includes("statut"));
+});
+test("checkEnumValues: valeurs connues -> rien signalé", () => {
+    context.state = { requests: [{ id: "r1", name: "Dupont", type: "Baptême", status: "En attente", priority: "Normale" }], intentions: [], personnel: [] };
+    assertSameStructure(context.checkEnumValues(), []);
+});
+
+test("checkPossibleDuplicates: même nom/prénom/date de naissance -> signalé", () => {
+    context.state = {
+        people: [
+            { id: "p1", prenom: "Jean", nom: "Dupont", dateNaissance: "1950-01-01" },
+            { id: "p2", prenom: "Jean", nom: "Dupont", dateNaissance: "1950-01-01" }
+        ]
+    };
+    const findings = context.checkPossibleDuplicates();
+    assert.strictEqual(findings.length, 1);
+    assert.strictEqual(findings[0].entityId, "p2");
+});
+test("checkPossibleDuplicates: personnes différentes -> rien signalé", () => {
+    context.state = {
+        people: [
+            { id: "p1", prenom: "Jean", nom: "Dupont", dateNaissance: "1950-01-01" },
+            { id: "p2", prenom: "Marie", nom: "Martin", dateNaissance: "1962-05-05" }
+        ]
+    };
+    assertSameStructure(context.checkPossibleDuplicates(), []);
 });
 
 console.log(`\n${passed} test(s) réussi(s), ${failed} échec(s).`);
