@@ -210,21 +210,25 @@ async function saveIntention(e) {
         updatedAt: now
     };
 
-    try {
-        await IntentionsRepository.put(intention);
-        await addHistory("intention", intention.id, existing ? "update" : "create", existing ? "Intention modifiée" : "Intention créée");
-        await loadIntentionsData();
-        renderIntentionsList();
-        renderIntentionsSummary();
-        renderOverview();
-        renderAgenda();
-        toast(existing ? "Intention modifiée." : "Intention ajoutée.", "success");
-        if (e.submitter?.dataset.action === "save-and-new") showIntentionForm(null);
-        else showIntentionDetail(intention.id);
-    } catch (err) {
-        Logger.error("intentions.saveIntention", err);
-        toast("Impossible d'enregistrer cette intention.", "error");
-    }
+    await withSubmitLock(e.target, async () => {
+        try {
+            await withHistoryTx([db.intentions], async () => {
+                await IntentionsRepository.put(intention);
+                await addHistory("intention", intention.id, existing ? "update" : "create", existing ? "Intention modifiée" : "Intention créée");
+            });
+            await loadIntentionsData();
+            renderIntentionsList();
+            renderIntentionsSummary();
+            renderOverview();
+            renderAgenda();
+            toast(existing ? "Intention modifiée." : "Intention ajoutée.", "success");
+            if (e.submitter?.dataset.action === "save-and-new") showIntentionForm(null);
+            else showIntentionDetail(intention.id);
+        } catch (err) {
+            Logger.error("intentions.saveIntention", err);
+            toast("Impossible d'enregistrer cette intention.", "error");
+        }
+    });
 }
 
 function showIntentionDetail(id) {
@@ -289,17 +293,27 @@ function showIntentionDetail(id) {
 async function toggleIntentionStatus(id) {
     const i = state.intentions.find(x => x.id === id);
     if (!i) return;
-    i.statut = i.statut === "Célébrée" ? "À célébrer" : "Célébrée";
-    i.updatedAt = nowISO();
-    await IntentionsRepository.put(i);
-    await addHistory("intention", id, i.statut === "Célébrée" ? "complete" : "update", i.statut === "Célébrée" ? "Marquée célébrée" : "Remise à célébrer");
-    await loadIntentionsData();
-    renderIntentionsList();
-    renderIntentionsSummary();
-    renderOverview();
-    renderAgenda();
-    showIntentionDetail(id);
-    toast(i.statut === "Célébrée" ? "Intention marquée célébrée." : "Intention remise à célébrer.", "success");
+
+    await withActionLock(`intention:status:${id}`, async () => {
+        try {
+            await withHistoryTx([db.intentions], async () => {
+                i.statut = i.statut === "Célébrée" ? "À célébrer" : "Célébrée";
+                i.updatedAt = nowISO();
+                await IntentionsRepository.put(i);
+                await addHistory("intention", id, i.statut === "Célébrée" ? "complete" : "update", i.statut === "Célébrée" ? "Marquée célébrée" : "Remise à célébrer");
+            });
+            await loadIntentionsData();
+            renderIntentionsList();
+            renderIntentionsSummary();
+            renderOverview();
+            renderAgenda();
+            showIntentionDetail(id);
+            toast(i.statut === "Célébrée" ? "Intention marquée célébrée." : "Intention remise à célébrer.", "success");
+        } catch (err) {
+            Logger.error("intentions.toggleIntentionStatus", err);
+            toast("Impossible de modifier cette intention.", "error");
+        }
+    });
 }
 
 /* ============================================================
@@ -310,45 +324,53 @@ async function trashIntention(id) {
     if (!i) return;
     if (!window.confirm(`Mettre à la corbeille l'intention « ${i.intitule || i.type} » ?\n\nElle pourra être restaurée depuis la Corbeille.`)) return;
 
-    try {
-        i.deletedAt = nowISO();
-        i.updatedAt = nowISO();
-        await IntentionsRepository.put(i);
-        await addHistory("intention", id, "trash", "Intention mise à la corbeille");
-        await loadIntentionsData();
-        renderIntentionsList();
-        renderIntentionsSummary();
-        renderOverview();
-        renderAgenda();
-        renderTrash();
-        toast("Intention mise à la corbeille.", "success");
-        showPage("intentions");
-    } catch (err) {
-        Logger.error("intentions.trashIntention", err);
-        toast("Impossible de mettre cette intention à la corbeille.", "error");
-    }
+    await withActionLock(`intention:trash:${id}`, async () => {
+        try {
+            await withHistoryTx([db.intentions], async () => {
+                i.deletedAt = nowISO();
+                i.updatedAt = nowISO();
+                await IntentionsRepository.put(i);
+                await addHistory("intention", id, "trash", "Intention mise à la corbeille");
+            });
+            await loadIntentionsData();
+            renderIntentionsList();
+            renderIntentionsSummary();
+            renderOverview();
+            renderAgenda();
+            renderTrash();
+            toast("Intention mise à la corbeille.", "success");
+            showPage("intentions");
+        } catch (err) {
+            Logger.error("intentions.trashIntention", err);
+            toast("Impossible de mettre cette intention à la corbeille.", "error");
+        }
+    });
 }
 
 async function restoreIntention(id) {
     const i = state.intentionsTrash.find(x => x.id === id);
     if (!i) return;
 
-    try {
-        i.deletedAt = null;
-        i.updatedAt = nowISO();
-        await IntentionsRepository.put(i);
-        await addHistory("intention", id, "restore", "Intention restaurée depuis la corbeille");
-        await loadIntentionsData();
-        renderIntentionsList();
-        renderIntentionsSummary();
-        renderOverview();
-        renderAgenda();
-        renderTrash();
-        toast("Intention restaurée.", "success");
-    } catch (err) {
-        Logger.error("intentions.restoreIntention", err);
-        toast("Impossible de restaurer cette intention.", "error");
-    }
+    await withActionLock(`intention:restore:${id}`, async () => {
+        try {
+            await withHistoryTx([db.intentions], async () => {
+                i.deletedAt = null;
+                i.updatedAt = nowISO();
+                await IntentionsRepository.put(i);
+                await addHistory("intention", id, "restore", "Intention restaurée depuis la corbeille");
+            });
+            await loadIntentionsData();
+            renderIntentionsList();
+            renderIntentionsSummary();
+            renderOverview();
+            renderAgenda();
+            renderTrash();
+            toast("Intention restaurée.", "success");
+        } catch (err) {
+            Logger.error("intentions.restoreIntention", err);
+            toast("Impossible de restaurer cette intention.", "error");
+        }
+    });
 }
 
 async function purgeIntention(id) {
@@ -356,20 +378,24 @@ async function purgeIntention(id) {
     if (!i) return;
     if (!window.confirm(`Supprimer définitivement l'intention « ${i.intitule || i.type} » ?\n\nCette action est IRRÉVERSIBLE : la fiche ne pourra plus être restaurée.`)) return;
 
-    try {
-        await IntentionsRepository.remove(id);
-        await addHistory("intention", id, "purge", "Intention supprimée définitivement");
-        await loadIntentionsData();
-        renderIntentionsList();
-        renderIntentionsSummary();
-        renderOverview();
-        renderAgenda();
-        renderTrash();
-        toast("Intention supprimée définitivement.", "success");
-    } catch (err) {
-        Logger.error("intentions.purgeIntention", err);
-        toast("Impossible de supprimer définitivement cette intention.", "error");
-    }
+    await withActionLock(`intention:purge:${id}`, async () => {
+        try {
+            await withHistoryTx([db.intentions], async () => {
+                await IntentionsRepository.remove(id);
+                await addHistory("intention", id, "purge", "Intention supprimée définitivement");
+            });
+            await loadIntentionsData();
+            renderIntentionsList();
+            renderIntentionsSummary();
+            renderOverview();
+            renderAgenda();
+            renderTrash();
+            toast("Intention supprimée définitivement.", "success");
+        } catch (err) {
+            Logger.error("intentions.purgeIntention", err);
+            toast("Impossible de supprimer définitivement cette intention.", "error");
+        }
+    });
 }
 
 /* ============================================================
