@@ -76,11 +76,21 @@ self.addEventListener("activate", event => {
 // Stale-while-revalidate : sert le cache immédiatement s'il existe
 // (accès instantané, y compris hors ligne) tout en rafraîchissant le
 // cache en arrière-plan dès que le réseau répond.
+//
+// V6.6 : caches.match(event.request) sans précision de cache interroge
+// TOUS les caches de l'origine (API CacheStorage), pas seulement
+// CACHE_NAME. Pendant la fenêtre (brève mais réelle) où l'ancien ET le
+// nouveau cache coexistent — entre l'activation d'une nouvelle version
+// (skipWaiting()) et la fin du nettoyage dans "activate" ci-dessus —
+// une requête pouvait donc être servie depuis l'ancien cache au lieu du
+// nouveau, ou l'inverse, de façon non déterministe : exactement le
+// risque de "mélange entre anciens et nouveaux fichiers" à éviter.
+// Restreindre explicitement à CACHE_NAME élimine ce risque.
 self.addEventListener("fetch", event => {
     if (event.request.method !== "GET") return;
 
     event.respondWith(
-        caches.match(event.request).then(cached => {
+        caches.open(CACHE_NAME).then(cache => cache.match(event.request)).then(cached => {
             const network = fetch(event.request).then(response => {
                 if (response && response.status === 200) {
                     const copy = response.clone();
