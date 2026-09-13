@@ -9,7 +9,8 @@
    (lieu) plutôt que de ressaisir ces informations en texte libre.
 ============================================================ */
 async function loadIntentionsData() {
-    state.intentions = await IntentionsRepository.list();
+    state.intentions = await IntentionsRepository.listActive();
+    state.intentionsTrash = await IntentionsRepository.listDeleted();
 }
 
 function renderIntentionFormOptions() {
@@ -111,7 +112,7 @@ function renderIntentionCard(i) {
             </div>
             <div class="request-actions">
                 <button class="icon-btn" data-action="edit" title="Modifier" aria-label="Modifier">${icon("edit")}</button>
-                <button class="icon-btn" data-action="delete" title="Supprimer" aria-label="Supprimer">${icon("trash")}</button>
+                <button class="icon-btn" data-action="delete" title="Mettre à la corbeille" aria-label="Mettre à la corbeille">${icon("trash")}</button>
             </div>
         </article>
     `;
@@ -211,6 +212,7 @@ async function saveIntention(e) {
 
     try {
         await IntentionsRepository.put(intention);
+        await addHistory("intention", intention.id, existing ? "update" : "create", existing ? "Intention modifiée" : "Intention créée");
         await loadIntentionsData();
         renderIntentionsList();
         renderIntentionsSummary();
@@ -230,9 +232,9 @@ function showIntentionDetail(id) {
     if (!i) return;
     state.selectedIntentionId = id;
 
-    const linkedPerson = i.personId ? state.people.find(p => p.id === i.personId) : null;
-    const linkedClocher = i.clocherId ? state.clochers.find(c => c.id === i.clocherId) : null;
-    const linkedCelebrant = i.personnelId ? state.personnel.find(p => p.id === i.personnelId) : null;
+    const personLink = findLinked(state.people, state.peopleTrash, i.personId);
+    const clocherLink = findLinked(state.clochers, state.clochersTrash, i.clocherId);
+    const celebrantLink = findLinked(state.personnel, state.personnelTrash, i.personnelId);
 
     $("#intentionDetailTitle").textContent = `Intentions › ${i.intitule || i.type}`;
 
@@ -253,11 +255,11 @@ function showIntentionDetail(id) {
             <dl class="fiche-grid">
                 ${ficheField("Dates", describeIntentionDates(i))}
                 ${ficheField("Heure", escapeHTML(i.heure))}
-                ${ficheField("Lieu", linkedClocher
-                    ? `<button type="button" class="link-btn" data-goto-clocher="${escapeHTML(linkedClocher.id)}">${icon("church", "icon-inline")}${escapeHTML(linkedClocher.nom)}</button>`
+                ${ficheField("Lieu", clocherLink.status !== "none"
+                    ? linkedRecordFieldHTML(clocherLink, "data-goto-clocher", c => `${icon("church", "icon-inline")}${escapeHTML(c.nom)}`)
                     : "")}
-                ${ficheField("Célébrant", linkedCelebrant
-                    ? `<button type="button" class="link-btn" data-goto-personnel="${escapeHTML(linkedCelebrant.id)}">${escapeHTML(linkedCelebrant.prenom)} ${escapeHTML(linkedCelebrant.nom)}</button>`
+                ${ficheField("Célébrant", celebrantLink.status !== "none"
+                    ? linkedRecordFieldHTML(celebrantLink, "data-goto-personnel", p => `${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}`)
                     : "")}
                 ${ficheField("Offrande", escapeHTML(i.offrande))}
             </dl>
@@ -265,9 +267,7 @@ function showIntentionDetail(id) {
         <div class="fiche-section">
             <h4 class="fiche-section-title">Demandeur</h4>
             <dl class="fiche-grid">
-                ${ficheField("Personne liée", linkedPerson
-                    ? `<button type="button" class="link-btn" data-goto-person="${escapeHTML(linkedPerson.id)}">${escapeHTML(linkedPerson.prenom)} ${escapeHTML(linkedPerson.nom)}</button>`
-                    : (i.personId ? "Personne introuvable (supprimée)" : ""))}
+                ${ficheField("Personne liée", linkedRecordFieldHTML(personLink, "data-goto-person", p => `${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}`))}
                 ${ficheField("Contact", escapeHTML(i.contact))}
             </dl>
         </div>
@@ -277,6 +277,7 @@ function showIntentionDetail(id) {
                 ${ficheField("Notes", escapeHTML(i.notes) || "Aucune note.", true)}
             </dl>
         </div>
+        ${historySectionHTML("intention", id)}
     `;
 
     $("#intentionDetailToggleBtn").innerHTML = i.statut === "Célébrée"
@@ -291,6 +292,7 @@ async function toggleIntentionStatus(id) {
     i.statut = i.statut === "Célébrée" ? "À célébrer" : "Célébrée";
     i.updatedAt = nowISO();
     await IntentionsRepository.put(i);
+    await addHistory("intention", id, i.statut === "Célébrée" ? "complete" : "update", i.statut === "Célébrée" ? "Marquée célébrée" : "Remise à célébrer");
     await loadIntentionsData();
     renderIntentionsList();
     renderIntentionsSummary();
@@ -300,23 +302,73 @@ async function toggleIntentionStatus(id) {
     toast(i.statut === "Célébrée" ? "Intention marquée célébrée." : "Intention remise à célébrer.", "success");
 }
 
-async function deleteIntention(id) {
+/* ============================================================
+   CORBEILLE (V6.2.c) — même principe que js/requests.js.
+============================================================ */
+async function trashIntention(id) {
     const i = state.intentions.find(x => x.id === id);
     if (!i) return;
-    if (!window.confirm(`Supprimer définitivement l'intention « ${i.intitule || i.type} » ?\n\nCette action est irréversible.`)) return;
+    if (!window.confirm(`Mettre à la corbeille l'intention « ${i.intitule || i.type} » ?\n\nElle pourra être restaurée depuis la Corbeille.`)) return;
 
     try {
-        await IntentionsRepository.remove(id);
+        i.deletedAt = nowISO();
+        i.updatedAt = nowISO();
+        await IntentionsRepository.put(i);
+        await addHistory("intention", id, "trash", "Intention mise à la corbeille");
         await loadIntentionsData();
         renderIntentionsList();
         renderIntentionsSummary();
         renderOverview();
         renderAgenda();
-        toast("Intention supprimée.", "success");
+        renderTrash();
+        toast("Intention mise à la corbeille.", "success");
         showPage("intentions");
     } catch (err) {
-        Logger.error("intentions.deleteIntention", err);
-        toast("Impossible de supprimer cette intention.", "error");
+        Logger.error("intentions.trashIntention", err);
+        toast("Impossible de mettre cette intention à la corbeille.", "error");
+    }
+}
+
+async function restoreIntention(id) {
+    const i = state.intentionsTrash.find(x => x.id === id);
+    if (!i) return;
+
+    try {
+        i.deletedAt = null;
+        i.updatedAt = nowISO();
+        await IntentionsRepository.put(i);
+        await addHistory("intention", id, "restore", "Intention restaurée depuis la corbeille");
+        await loadIntentionsData();
+        renderIntentionsList();
+        renderIntentionsSummary();
+        renderOverview();
+        renderAgenda();
+        renderTrash();
+        toast("Intention restaurée.", "success");
+    } catch (err) {
+        Logger.error("intentions.restoreIntention", err);
+        toast("Impossible de restaurer cette intention.", "error");
+    }
+}
+
+async function purgeIntention(id) {
+    const i = state.intentionsTrash.find(x => x.id === id);
+    if (!i) return;
+    if (!window.confirm(`Supprimer définitivement l'intention « ${i.intitule || i.type} » ?\n\nCette action est IRRÉVERSIBLE : la fiche ne pourra plus être restaurée.`)) return;
+
+    try {
+        await IntentionsRepository.remove(id);
+        await addHistory("intention", id, "purge", "Intention supprimée définitivement");
+        await loadIntentionsData();
+        renderIntentionsList();
+        renderIntentionsSummary();
+        renderOverview();
+        renderAgenda();
+        renderTrash();
+        toast("Intention supprimée définitivement.", "success");
+    } catch (err) {
+        Logger.error("intentions.purgeIntention", err);
+        toast("Impossible de supprimer définitivement cette intention.", "error");
     }
 }
 
@@ -369,7 +421,7 @@ function initIntentionsEvents() {
     $("#intentionDetailBackBtn").addEventListener("click", goBack);
     $("#intentionEditBtn").addEventListener("click", () => state.selectedIntentionId && showIntentionForm(state.selectedIntentionId));
     $("#intentionDetailToggleBtn").addEventListener("click", () => state.selectedIntentionId && toggleIntentionStatus(state.selectedIntentionId));
-    $("#intentionDeleteBtn").addEventListener("click", () => state.selectedIntentionId && deleteIntention(state.selectedIntentionId));
+    $("#intentionDeleteBtn").addEventListener("click", () => state.selectedIntentionId && trashIntention(state.selectedIntentionId));
 
     $("#intentionDetailBody").addEventListener("click", e => {
         const personBtn = e.target.closest("[data-goto-person]");
@@ -390,7 +442,7 @@ function initIntentionsEvents() {
 
         switch (btn.dataset.action) {
             case "edit": showIntentionForm(id); break;
-            case "delete": deleteIntention(id); break;
+            case "delete": trashIntention(id); break;
         }
     });
 }

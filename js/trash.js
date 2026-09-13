@@ -49,6 +49,13 @@ const TRASH_ENTITY_CONFIG = [
         titleOf: p => `${p.prenom} ${p.nom}`.trim() || "Personnel",
         restore: id => restorePersonnel(id),
         purge: id => purgePersonnel(id)
+    },
+    {
+        type: "intention",
+        stateKey: "intentionsTrash",
+        titleOf: i => i.intitule || i.type || "Intention",
+        restore: id => restoreIntention(id),
+        purge: id => purgeIntention(id)
     }
 ];
 

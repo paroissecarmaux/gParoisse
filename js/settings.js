@@ -287,7 +287,8 @@ const DATA_MODULES = [
             { key: "contact", header: "Contact" },
             { key: "clocherId", header: "ID clocher" },
             { key: "personnelId", header: "ID célébrant" },
-            { key: "notes", header: "Notes" }
+            { key: "notes", header: "Notes" },
+            { key: "deletedAt", header: "Supprimée le (corbeille)" }
         ]
     }
 ];
