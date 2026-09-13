@@ -64,6 +64,17 @@ const GLOBAL_SEARCH_SOURCES = [
         title: c => c.nom || "Sans nom",
         subtitle: c => c.commune || "",
         open: c => showClocherDetail(c.id)
+    },
+    {
+        key: "schedule",
+        label: "Annonces",
+        icon: "bell",
+        search: q => state.schedule
+            .filter(s => normalize(`${s.title} ${s.category} ${s.location}`).includes(q))
+            .slice(0, 8),
+        title: s => s.title || "Sans titre",
+        subtitle: s => describeRecurrence(s),
+        open: s => showScheduleDetail(s.id)
     }
 ];
 
