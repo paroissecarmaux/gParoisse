@@ -14,8 +14,8 @@ function requestIsEvent(r) {
 }
 
 async function loadRequestsData() {
-    state.requests = await db.requests.orderBy("updatedAt").reverse().toArray();
-    state.history = await db.history.toArray();
+    state.requests = await RequestsRepository.list();
+    state.history = await HistoryRepository.list();
 }
 
 function createDefaultRequest() {
@@ -75,7 +75,7 @@ function normalizeRequest(raw) {
 }
 
 async function addHistory(requestId, action, description) {
-    await db.history.put({
+    await HistoryRepository.put({
         id: uid(),
         requestId,
         action,
@@ -393,7 +393,7 @@ async function saveRequest(e) {
     if (request.status !== "Terminé") request.completedAt = null;
 
     try {
-        await db.requests.put(request);
+        await RequestsRepository.put(request);
         await addHistory(request.id, existing ? "update" : "create",
             existing ? "Demande modifiée" : "Demande créée");
         await loadRequestsData();
@@ -404,7 +404,7 @@ async function saveRequest(e) {
         toast(existing ? "Demande modifiée." : "Demande créée.", "success");
         showRequestDetail(request.id);
     } catch (err) {
-        console.error(err);
+        Logger.error("requests.saveRequest", err);
         toast("Impossible d'enregistrer la demande.", "error");
     }
 }
@@ -522,7 +522,7 @@ async function toggleArchive(id) {
 
     r.archived = archive;
     r.updatedAt = nowISO();
-    await db.requests.put(r);
+    await RequestsRepository.put(r);
     await addHistory(id, archive ? "archive" : "restore", archive ? "Demande archivée" : "Demande restaurée");
     await loadRequestsData();
     renderRequestsSummary();
@@ -540,7 +540,7 @@ async function markComplete(id) {
     r.status = "Terminé";
     r.completedAt = nowISO();
     r.updatedAt = nowISO();
-    await db.requests.put(r);
+    await RequestsRepository.put(r);
     await addHistory(id, "complete", "Marquée comme terminée");
     await loadRequestsData();
     renderRequestsSummary();
@@ -555,7 +555,7 @@ async function deleteRequest(id) {
     if (!window.confirm(`Supprimer définitivement la demande de ${r.name || "cette personne"} ?\n\nCette action est irréversible.`)) return;
 
     try {
-        await db.requests.delete(id);
+        await RequestsRepository.remove(id);
         await addHistory(id, "delete", "Demande supprimée définitivement");
         await loadRequestsData();
         renderRequestsSummary();
@@ -565,7 +565,7 @@ async function deleteRequest(id) {
         toast("Demande supprimée.", "success");
         showPage("requests");
     } catch (err) {
-        console.error(err);
+        Logger.error("requests.deleteRequest", err);
         toast("Impossible de supprimer la demande.", "error");
     }
 }
