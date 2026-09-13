@@ -20,6 +20,21 @@ async function addHistory(entityType, entityId, action, description) {
     });
 }
 
+// V6.6 : jusqu'ici, chaque saveX()/trashX()/restoreX()/purgeX() faisait
+// deux écritures Dexie indépendantes (l'enregistrement métier, puis
+// addHistory()) — si la seconde échouait après le succès de la
+// première, l'état réel divergeait silencieusement de son journal
+// d'audit (voir docs/V6.2-C-IMPLEMENTATION.md §6, qui documentait ce
+// risque comme acceptable mais non traité). withHistoryTx() regroupe
+// les deux dans une transaction Dexie commune : si l'une échoue,
+// Dexie annule (rollback) l'autre — l'enregistrement métier ne peut
+// plus jamais être "orphelin" de sa propre trace d'audit.
+// `tables` : les tables Dexie (pas les repositories) écrites par
+// `fn`, en plus de `db.history` toujours incluse.
+function withHistoryTx(tables, fn) {
+    return db.transaction("rw", ...tables, db.history, fn);
+}
+
 // Normalise une entrée history quelle que soit sa version (voir le
 // commentaire d'en-tête) sans jamais modifier l'enregistrement stocké.
 function historyEntityType(h) {

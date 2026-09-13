@@ -390,21 +390,25 @@ async function saveRequest(e) {
     if (request.status === "Terminé" && !request.completedAt) request.completedAt = now;
     if (request.status !== "Terminé") request.completedAt = null;
 
-    try {
-        await RequestsRepository.put(request);
-        await addHistory("request", request.id, existing ? "update" : "create",
-            existing ? "Demande modifiée" : "Demande créée");
-        await loadRequestsData();
-        renderRequestsSummary();
-        renderRequests();
-        renderOverview();
-        renderAgenda();
-        toast(existing ? "Demande modifiée." : "Demande créée.", "success");
-        showRequestDetail(request.id);
-    } catch (err) {
-        Logger.error("requests.saveRequest", err);
-        toast("Impossible d'enregistrer la demande.", "error");
-    }
+    await withSubmitLock(e.target, async () => {
+        try {
+            await withHistoryTx([db.requests], async () => {
+                await RequestsRepository.put(request);
+                await addHistory("request", request.id, existing ? "update" : "create",
+                    existing ? "Demande modifiée" : "Demande créée");
+            });
+            await loadRequestsData();
+            renderRequestsSummary();
+            renderRequests();
+            renderOverview();
+            renderAgenda();
+            toast(existing ? "Demande modifiée." : "Demande créée.", "success");
+            showRequestDetail(request.id);
+        } catch (err) {
+            Logger.error("requests.saveRequest", err);
+            toast("Impossible d'enregistrer la demande.", "error");
+        }
+    });
 }
 
 function showRequestDetail(id) {
@@ -501,33 +505,51 @@ async function toggleArchive(id) {
 
     if (archive && !window.confirm(`Archiver la demande de ${r.name || "cette personne"} ?`)) return;
 
-    r.archived = archive;
-    r.updatedAt = nowISO();
-    await RequestsRepository.put(r);
-    await addHistory("request", id, archive ? "archive" : "restore", archive ? "Demande archivée" : "Demande restaurée");
-    await loadRequestsData();
-    renderRequestsSummary();
-    renderRequests();
-    renderOverview();
-    renderAgenda();
-    toast(archive ? "Demande archivée." : "Demande restaurée.", "success");
-    showPage("requests");
+    await withActionLock(`request:archive:${id}`, async () => {
+        try {
+            await withHistoryTx([db.requests], async () => {
+                r.archived = archive;
+                r.updatedAt = nowISO();
+                await RequestsRepository.put(r);
+                await addHistory("request", id, archive ? "archive" : "restore", archive ? "Demande archivée" : "Demande restaurée");
+            });
+            await loadRequestsData();
+            renderRequestsSummary();
+            renderRequests();
+            renderOverview();
+            renderAgenda();
+            toast(archive ? "Demande archivée." : "Demande restaurée.", "success");
+            showPage("requests");
+        } catch (err) {
+            Logger.error("requests.toggleArchive", err);
+            toast("Impossible de modifier l'archivage de cette demande.", "error");
+        }
+    });
 }
 
 async function markComplete(id) {
     const r = state.requests.find(x => x.id === id);
     if (!r || r.status === "Terminé") return;
 
-    r.status = "Terminé";
-    r.completedAt = nowISO();
-    r.updatedAt = nowISO();
-    await RequestsRepository.put(r);
-    await addHistory("request", id, "complete", "Marquée comme terminée");
-    await loadRequestsData();
-    renderRequestsSummary();
-    renderRequests();
-    renderOverview();
-    toast("Demande terminée.", "success");
+    await withActionLock(`request:complete:${id}`, async () => {
+        try {
+            await withHistoryTx([db.requests], async () => {
+                r.status = "Terminé";
+                r.completedAt = nowISO();
+                r.updatedAt = nowISO();
+                await RequestsRepository.put(r);
+                await addHistory("request", id, "complete", "Marquée comme terminée");
+            });
+            await loadRequestsData();
+            renderRequestsSummary();
+            renderRequests();
+            renderOverview();
+            toast("Demande terminée.", "success");
+        } catch (err) {
+            Logger.error("requests.markComplete", err);
+            toast("Impossible de marquer cette demande comme terminée.", "error");
+        }
+    });
 }
 
 /* ============================================================
@@ -544,45 +566,53 @@ async function trashRequest(id) {
     if (!r) return;
     if (!window.confirm(`Mettre à la corbeille la demande de ${r.name || "cette personne"} ?\n\nElle pourra être restaurée depuis la Corbeille.`)) return;
 
-    try {
-        r.deletedAt = nowISO();
-        r.updatedAt = nowISO();
-        await RequestsRepository.put(r);
-        await addHistory("request", id, "trash", "Demande mise à la corbeille");
-        await loadRequestsData();
-        renderRequestsSummary();
-        renderRequests();
-        renderOverview();
-        renderAgenda();
-        renderTrash();
-        toast("Demande mise à la corbeille.", "success");
-        showPage("requests");
-    } catch (err) {
-        Logger.error("requests.trashRequest", err);
-        toast("Impossible de mettre cette demande à la corbeille.", "error");
-    }
+    await withActionLock(`request:trash:${id}`, async () => {
+        try {
+            await withHistoryTx([db.requests], async () => {
+                r.deletedAt = nowISO();
+                r.updatedAt = nowISO();
+                await RequestsRepository.put(r);
+                await addHistory("request", id, "trash", "Demande mise à la corbeille");
+            });
+            await loadRequestsData();
+            renderRequestsSummary();
+            renderRequests();
+            renderOverview();
+            renderAgenda();
+            renderTrash();
+            toast("Demande mise à la corbeille.", "success");
+            showPage("requests");
+        } catch (err) {
+            Logger.error("requests.trashRequest", err);
+            toast("Impossible de mettre cette demande à la corbeille.", "error");
+        }
+    });
 }
 
 async function restoreRequest(id) {
     const r = state.requestsTrash.find(x => x.id === id);
     if (!r) return;
 
-    try {
-        r.deletedAt = null;
-        r.updatedAt = nowISO();
-        await RequestsRepository.put(r);
-        await addHistory("request", id, "restore", "Demande restaurée depuis la corbeille");
-        await loadRequestsData();
-        renderRequestsSummary();
-        renderRequests();
-        renderOverview();
-        renderAgenda();
-        renderTrash();
-        toast("Demande restaurée.", "success");
-    } catch (err) {
-        Logger.error("requests.restoreRequest", err);
-        toast("Impossible de restaurer cette demande.", "error");
-    }
+    await withActionLock(`request:restore:${id}`, async () => {
+        try {
+            await withHistoryTx([db.requests], async () => {
+                r.deletedAt = null;
+                r.updatedAt = nowISO();
+                await RequestsRepository.put(r);
+                await addHistory("request", id, "restore", "Demande restaurée depuis la corbeille");
+            });
+            await loadRequestsData();
+            renderRequestsSummary();
+            renderRequests();
+            renderOverview();
+            renderAgenda();
+            renderTrash();
+            toast("Demande restaurée.", "success");
+        } catch (err) {
+            Logger.error("requests.restoreRequest", err);
+            toast("Impossible de restaurer cette demande.", "error");
+        }
+    });
 }
 
 async function purgeRequest(id) {
@@ -590,23 +620,27 @@ async function purgeRequest(id) {
     if (!r) return;
     if (!window.confirm(`Supprimer définitivement la demande de ${r.name || "cette personne"} ?\n\nCette action est IRRÉVERSIBLE : la fiche ne pourra plus être restaurée.`)) return;
 
-    try {
-        await RequestsRepository.remove(id);
-        // L'historique est volontairement conservé après une suppression
-        // définitive : c'est justement le rôle d'un journal d'audit de
-        // survivre à l'entité qu'il décrit (voir docs/V6.2-C-DESIGN.md).
-        await addHistory("request", id, "purge", "Demande supprimée définitivement");
-        await loadRequestsData();
-        renderRequestsSummary();
-        renderRequests();
-        renderOverview();
-        renderAgenda();
-        renderTrash();
-        toast("Demande supprimée définitivement.", "success");
-    } catch (err) {
-        Logger.error("requests.purgeRequest", err);
-        toast("Impossible de supprimer définitivement cette demande.", "error");
-    }
+    await withActionLock(`request:purge:${id}`, async () => {
+        try {
+            await withHistoryTx([db.requests], async () => {
+                await RequestsRepository.remove(id);
+                // L'historique est volontairement conservé après une suppression
+                // définitive : c'est justement le rôle d'un journal d'audit de
+                // survivre à l'entité qu'il décrit (voir docs/V6.2-C-DESIGN.md).
+                await addHistory("request", id, "purge", "Demande supprimée définitivement");
+            });
+            await loadRequestsData();
+            renderRequestsSummary();
+            renderRequests();
+            renderOverview();
+            renderAgenda();
+            renderTrash();
+            toast("Demande supprimée définitivement.", "success");
+        } catch (err) {
+            Logger.error("requests.purgeRequest", err);
+            toast("Impossible de supprimer définitivement cette demande.", "error");
+        }
+    });
 }
 
 /* ============================================================

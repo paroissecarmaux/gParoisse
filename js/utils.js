@@ -387,3 +387,49 @@ function renderImportReport(report) {
     $("#importReportBody").innerHTML = buildImportReportHTML(report);
     panel.hidden = false;
 }
+
+/* ============================================================
+   VERROU DE SOUMISSION (V6.6)
+   Un double-clic (ou un clic pendant qu'un enregistrement précédent
+   est encore en cours) sur un bouton submit peut déclencher deux
+   exécutions concurrentes de saveX() — chacune générant son propre
+   uid() pour une nouvelle fiche : deux enregistrements dupliqués au
+   lieu d'un. withSubmitLock() désactive les boutons submit du
+   formulaire pour la durée de l'opération et pose state.formSubmitting
+   (lu par goBack()/la navigation globale, js/state.js et js/main.js)
+   pour empêcher aussi de quitter la page pendant l'enregistrement.
+   Ignore silencieusement un appel réentrant (déjà en cours) plutôt que
+   de l'empiler.
+============================================================ */
+// Même problème que withSubmitLock() ci-dessus, mais pour les actions à
+// un clic (archiver, terminer, mettre à la corbeille, restaurer,
+// purger…) qui n'ont pas de <form> à désactiver : un double-clic ou un
+// second déclenchement (raccourci clavier + clic, deux onglets/fenêtres
+// de la même page) avant la fin du premier appel peut dupliquer une
+// écriture Dexie et son entrée d'historique. `key` identifie l'action
+// précise (ex. "request:trash:abc123") : une action déjà en cours sur
+// la même clé est ignorée, mais deux clés différentes s'exécutent
+// normalement en parallèle (pas de verrou global inutile).
+const _actionLocks = new Set();
+async function withActionLock(key, run) {
+    if (_actionLocks.has(key)) return;
+    _actionLocks.add(key);
+    try {
+        await run();
+    } finally {
+        _actionLocks.delete(key);
+    }
+}
+
+async function withSubmitLock(form, run) {
+    if (state.formSubmitting) return;
+    const buttons = $$('button[type="submit"]', form);
+    state.formSubmitting = true;
+    buttons.forEach(b => { b.disabled = true; });
+    try {
+        await run();
+    } finally {
+        state.formSubmitting = false;
+        buttons.forEach(b => { b.disabled = false; });
+    }
+}

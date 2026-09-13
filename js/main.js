@@ -4,7 +4,21 @@
    NAVIGATION GLOBALE (sidebar)
 ============================================================ */
 function initGlobalEvents() {
-    $$(".nav-item").forEach(btn => btn.addEventListener("click", () => showPage(btn.dataset.page)));
+    $$(".nav-item").forEach(btn => btn.addEventListener("click", () => {
+        if (state.formSubmitting || !confirmDiscardIfDirty()) return;
+        showPage(btn.dataset.page);
+    }));
+
+    // V6.6 : marque state.formDirty dès qu'un champ change sur une page
+    // "-form" — délégué au document plutôt qu'un écouteur par champ par
+    // module. showPage() le remet à false à chaque navigation (voir
+    // js/state.js), donc seule une page "-form" actuellement affichée
+    // peut le poser.
+    const markFormDirty = e => {
+        if (e.target.closest('.view-page[data-page$="-form"]')) state.formDirty = true;
+    };
+    document.addEventListener("input", markFormDirty);
+    document.addEventListener("change", markFormDirty);
 
     $("#sidebarToggle").addEventListener("click", () => {
         $("#sidebar").classList.contains("open") ? closeSidebar() : openSidebar();
@@ -50,6 +64,7 @@ function initGlobalEvents() {
         }
 
         if (e.key.toLowerCase() === "n" && !typing && !e.ctrlKey && !e.metaKey) {
+            if (state.formSubmitting || !confirmDiscardIfDirty()) return;
             if (section === "people") { e.preventDefault(); showPersonForm(null); }
             else if (section === "requests") { e.preventDefault(); showRequestForm(null); }
             else if (section === "announcements") { e.preventDefault(); showScheduleForm(null); }
@@ -122,7 +137,7 @@ async function init() {
         renderAgenda();
         toast("Secrétariat prêt.", "success");
     } catch (err) {
-        console.error(err);
+        Logger.error("main.init", err);
         toast("Impossible d'ouvrir la base : " + err.message, "error");
     }
 }

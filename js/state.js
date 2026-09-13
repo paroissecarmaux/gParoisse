@@ -45,6 +45,14 @@ const state = {
     agendaRangeEnd: addDays(startOfWeekISO(todayISO()), 6),
     importMode: "merge",
     csvImportModuleKey: "requests",
+    // V6.6 : robustesse des formulaires (voir docs/V6.6-AUDIT.md).
+    // formDirty : un champ d'une page "-form" a été modifié depuis son
+    // ouverture -> confirmation avant de quitter sans enregistrer.
+    // formSubmitting : un enregistrement est en cours -> bloque toute
+    // navigation hors de la page tant qu'il n'est pas terminé (voir
+    // withSubmitLock(), js/utils.js).
+    formDirty: false,
+    formSubmitting: false,
     settings: {
         parishName: "Secrétariat paroissial de Carmaux-Valence",
         lastBackup: null,
@@ -85,6 +93,7 @@ const PAGE_SECTION = {
 
 function showPage(page) {
     state.page = page;
+    state.formDirty = false;
     $$(".view-page").forEach(el => { el.hidden = el.dataset.page !== page; });
 
     const section = PAGE_SECTION[page] || page;
@@ -131,7 +140,16 @@ function pageBackTarget(page) {
     }
 }
 
+// V6.6 : évite de perdre silencieusement une saisie en cours — voir
+// state.formDirty ci-dessus et le suivi délégué dans js/main.js.
+function confirmDiscardIfDirty() {
+    if (!state.formDirty) return true;
+    return window.confirm("Abandonner les modifications non enregistrées de ce formulaire ?");
+}
+
 function goBack() {
+    if (state.formSubmitting) return;
+    if (!confirmDiscardIfDirty()) return;
     const target = pageBackTarget(state.page);
     if (target) showPage(target);
 }
