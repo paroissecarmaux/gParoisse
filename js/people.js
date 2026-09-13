@@ -6,7 +6,8 @@
 const PEOPLE_PAGE_SIZE = 60;
 
 async function loadPeopleData() {
-    state.people = await PeopleRepository.list();
+    state.people = await PeopleRepository.listActive();
+    state.peopleTrash = await PeopleRepository.listDeleted();
     // Recherche/tri précalculés une seule fois ici plutôt qu'à chaque
     // rendu : décisif dès quelques milliers de personnes.
     state.people.forEach(p => {
@@ -120,7 +121,7 @@ function renderPersonCard(p) {
             </div>
             <div class="request-actions">
                 <button class="icon-btn" data-action="edit" title="Modifier" aria-label="Modifier">${icon("edit")}</button>
-                <button class="icon-btn" data-action="delete" title="Supprimer" aria-label="Supprimer">${icon("trash")}</button>
+                <button class="icon-btn" data-action="delete" title="Mettre à la corbeille" aria-label="Mettre à la corbeille">${icon("trash")}</button>
             </div>
         </article>
     `;
@@ -259,6 +260,7 @@ async function savePerson(e) {
 
     try {
         await PeopleRepository.put(person);
+        await addHistory("person", person.id, existing ? "update" : "create", existing ? "Fiche modifiée" : "Fiche créée");
         await loadPeopleData();
         renderPeopleList();
         renderPeopleSummary();
@@ -326,6 +328,7 @@ function showPersonDetail(id) {
                         ${ficheField("Notes", escapeHTML(p.notes) || "Aucune observation.", true)}
                     </dl>
                 </div>
+                ${historySectionHTML("person", id)}
             </section>
         `;
         $("#personDocsBtn").hidden = true;
@@ -409,6 +412,7 @@ function showPersonDetail(id) {
                     <button type="button" class="fiche-tab active" data-tab="apercu" role="tab" aria-selected="true">Aperçu</button>
                     <button type="button" class="fiche-tab" data-tab="demandes" role="tab" aria-selected="false">Demandes liées${relatedRequests.length ? ` (${relatedRequests.length})` : ""}</button>
                     <button type="button" class="fiche-tab" data-tab="notes" role="tab" aria-selected="false">Notes</button>
+                    <button type="button" class="fiche-tab" data-tab="historique" role="tab" aria-selected="false">Historique</button>
                 </div>
 
                 <div class="fiche-tab-panel" data-tab-panel="apercu">
@@ -453,6 +457,10 @@ function showPersonDetail(id) {
                         ${ficheField("Créée le", formatDateTime(p.createdAt))}
                         ${ficheField("Modifiée le", formatDateTime(p.updatedAt))}
                     </dl>
+                </div>
+
+                <div class="fiche-tab-panel" data-tab-panel="historique" hidden>
+                    ${historySectionHTML("person", id)}
                 </div>
             </div>
         </div>
@@ -576,23 +584,79 @@ function personLinkedRecordsWarning(p) {
     ]);
 }
 
-async function deletePerson(id) {
+/* ============================================================
+   CORBEILLE (V6.2.c)
+   Mêmes principes que js/requests.js : trashPerson() ne fait que
+   poser deletedAt (la fiche disparaît des listes/recherches/KPI/
+   suggestions via loadPeopleData(), désormais limité aux actifs) ;
+   les demandes/intentions qui référencent cette personne gardent
+   leur personId intact (voir findLinked() dans js/utils.js pour
+   l'affichage "dans la corbeille" côté fiche liée).
+============================================================ */
+async function trashPerson(id) {
     const p = state.people.find(x => x.id === id);
     if (!p) return;
     const warning = personLinkedRecordsWarning(p);
-    if (!window.confirm(`${warning}\n\nSupprimer définitivement la fiche de ${p.prenom} ${p.nom} ?\n\nCette action est irréversible.`)) return;
+    if (!window.confirm(`${warning}\n\nMettre à la corbeille la fiche de ${p.prenom} ${p.nom} ?\n\nElle pourra être restaurée depuis la Corbeille.`)) return;
 
     try {
-        await PeopleRepository.remove(id);
+        p.deletedAt = nowISO();
+        p.updatedAt = nowISO();
+        await PeopleRepository.put(p);
+        await addHistory("person", id, "trash", "Fiche mise à la corbeille");
         await loadPeopleData();
         renderPeopleList();
         renderPeopleSummary();
         renderOverview();
-        toast("Personne supprimée.", "success");
+        renderTrash();
+        toast("Personne mise à la corbeille.", "success");
         showPage("people");
     } catch (err) {
-        Logger.error("people.deletePerson", err);
-        toast("Impossible de supprimer cette personne.", "error");
+        Logger.error("people.trashPerson", err);
+        toast("Impossible de mettre cette personne à la corbeille.", "error");
+    }
+}
+
+async function restorePerson(id) {
+    const p = state.peopleTrash.find(x => x.id === id);
+    if (!p) return;
+
+    try {
+        p.deletedAt = null;
+        p.updatedAt = nowISO();
+        await PeopleRepository.put(p);
+        await addHistory("person", id, "restore", "Fiche restaurée depuis la corbeille");
+        await loadPeopleData();
+        renderPeopleList();
+        renderPeopleSummary();
+        renderOverview();
+        renderTrash();
+        toast("Personne restaurée.", "success");
+    } catch (err) {
+        Logger.error("people.restorePerson", err);
+        toast("Impossible de restaurer cette personne.", "error");
+    }
+}
+
+async function purgePerson(id) {
+    const p = state.peopleTrash.find(x => x.id === id);
+    if (!p) return;
+    if (!window.confirm(`Supprimer définitivement la fiche de ${p.prenom} ${p.nom} ?\n\nCette action est IRRÉVERSIBLE : la fiche ne pourra plus être restaurée.`)) return;
+
+    try {
+        await PeopleRepository.remove(id);
+        // Historique conservé après purge, comme pour les demandes : voir
+        // docs/V6.2-C-DESIGN.md.
+        await addHistory("person", id, "purge", "Fiche supprimée définitivement");
+        await loadPeopleData();
+        renderPeopleList();
+        renderPeopleSummary();
+        renderOverview();
+        renderTrash();
+        toast("Personne supprimée définitivement.", "success");
+    } catch (err) {
+        Logger.error("people.purgePerson", err);
+        toast("Impossible de supprimer définitivement cette personne.", "error");
     }
 }
 
@@ -715,7 +779,7 @@ function initPeopleEvents() {
 
     $("#personDetailBackBtn").addEventListener("click", goBack);
     $("#personEditBtn").addEventListener("click", () => state.selectedPersonId && showPersonForm(state.selectedPersonId));
-    $("#personDeleteBtn").addEventListener("click", () => state.selectedPersonId && deletePerson(state.selectedPersonId));
+    $("#personDeleteBtn").addEventListener("click", () => state.selectedPersonId && trashPerson(state.selectedPersonId));
     $("#personNewIntentionBtn").addEventListener("click", () => state.selectedPersonId && createIntentionForPerson(state.selectedPersonId));
 
     $("#personDetailBody").addEventListener("click", e => {
@@ -767,7 +831,7 @@ function initPeopleEvents() {
         switch (btn.dataset.action) {
             case "open": showPersonDetail(id); break;
             case "edit": showPersonForm(id); break;
-            case "delete": deletePerson(id); break;
+            case "delete": trashPerson(id); break;
         }
     });
 
