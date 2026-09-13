@@ -328,13 +328,13 @@ async function importModuleCSVFile(file) {
     if (!m) return;
     try {
         const rows = parseCSV(await file.text());
-        if (rows.length < 2) throw new Error("Le fichier ne contient aucune ligne de données.");
+        if (rows.length < 2) throw new ValidationError("Le fichier ne contient aucune ligne de données.");
 
         const fieldForCol = rows[0].map(h => {
             const norm = normalizeHeaderKey(h);
             return m.csvFields.find(f => normalizeHeaderKey(f.header) === norm) || null;
         });
-        if (!fieldForCol.some(Boolean)) throw new Error("Aucune colonne reconnue dans l'en-tête du fichier.");
+        if (!fieldForCol.some(Boolean)) throw new ValidationError("Aucune colonne reconnue dans l'en-tête du fichier.");
 
         const now = nowISO();
         const records = [];
@@ -354,7 +354,7 @@ async function importModuleCSVFile(file) {
             records.push(record);
         }
 
-        if (!records.length) throw new Error("Aucune ligne exploitable dans ce fichier.");
+        if (!records.length) throw new ValidationError("Aucune ligne exploitable dans ce fichier.");
 
         await m.table().bulkPut(records);
         await m.load();
@@ -388,7 +388,7 @@ async function importFile(file) {
         });
 
         const totalCount = DATA_MODULES.reduce((sum, m) => sum + imported[m.key].length, 0);
-        if (!totalCount) throw new Error("Le fichier ne contient aucune donnée exploitable.");
+        if (!totalCount) throw new ValidationError("Le fichier ne contient aucune donnée exploitable.");
 
         const summary = DATA_MODULES.map(m => `${imported[m.key].length} ${m.label}`).join(", ");
 

@@ -632,10 +632,10 @@ async function importPeopleCSV(file) {
     try {
         const text = await file.text();
         const rows = parseCSV(text);
-        if (rows.length < 2) throw new Error("Le fichier ne contient aucune ligne de données.");
+        if (rows.length < 2) throw new ValidationError("Le fichier ne contient aucune ligne de données.");
 
         const fieldKeys = rows[0].map(h => CSV_FIELD_MAP[normalizeHeaderKey(h)] || null);
-        if (!fieldKeys.some(Boolean)) throw new Error("Aucune colonne reconnue dans l'en-tête du fichier.");
+        if (!fieldKeys.some(Boolean)) throw new ValidationError("Aucune colonne reconnue dans l'en-tête du fichier.");
 
         const now = nowISO();
         let skipped = 0;
