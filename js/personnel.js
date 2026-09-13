@@ -8,7 +8,7 @@
    intention de messe) via setupAutocomplete().
 ============================================================ */
 async function loadPersonnelData() {
-    state.personnel = await db.personnel.orderBy("updatedAt").reverse().toArray();
+    state.personnel = await PersonnelRepository.list();
 }
 
 function renderPersonnelFormOptions() {
@@ -179,14 +179,14 @@ async function savePersonnel(e) {
     };
 
     try {
-        await db.personnel.put(personnel);
+        await PersonnelRepository.put(personnel);
         await loadPersonnelData();
         renderPersonnelList();
         renderPersonnelSummary();
         toast(existing ? "Fiche modifiée." : "Fiche ajoutée.", "success");
         showPersonnelDetail(personnel.id);
     } catch (err) {
-        console.error(err);
+        Logger.error("personnel.savePersonnel", err);
         toast("Impossible d'enregistrer cette fiche.", "error");
     }
 }
@@ -262,7 +262,7 @@ async function togglePersonnelActive(id) {
     if (!p) return;
     p.active = !p.active;
     p.updatedAt = nowISO();
-    await db.personnel.put(p);
+    await PersonnelRepository.put(p);
     await loadPersonnelData();
     renderPersonnelList();
     renderPersonnelSummary();
@@ -276,14 +276,14 @@ async function deletePersonnel(id) {
     if (!window.confirm(`Supprimer définitivement la fiche de ${p.prenom} ${p.nom} ?\n\nCette action est irréversible.`)) return;
 
     try {
-        await db.personnel.delete(id);
+        await PersonnelRepository.remove(id);
         await loadPersonnelData();
         renderPersonnelList();
         renderPersonnelSummary();
         toast("Fiche supprimée.", "success");
         showPage("personnel");
     } catch (err) {
-        console.error(err);
+        Logger.error("personnel.deletePersonnel", err);
         toast("Impossible de supprimer cette fiche.", "error");
     }
 }
