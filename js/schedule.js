@@ -10,7 +10,7 @@
    Catégories et noms de jours : voir js/constants.js.
 ============================================================ */
 async function loadScheduleData() {
-    state.schedule = await db.schedule.orderBy("updatedAt").reverse().toArray();
+    state.schedule = await ScheduleRepository.list();
 }
 
 function renderScheduleCategoryOptions() {
@@ -186,7 +186,7 @@ async function saveSchedule(e) {
     };
 
     try {
-        await db.schedule.put(entry);
+        await ScheduleRepository.put(entry);
         await loadScheduleData();
         renderScheduleList();
         renderScheduleSummary();
@@ -195,7 +195,7 @@ async function saveSchedule(e) {
         toast(existing ? "Annonce modifiée." : "Annonce ajoutée.", "success");
         showScheduleDetail(entry.id);
     } catch (err) {
-        console.error(err);
+        Logger.error("schedule.saveSchedule", err);
         toast("Impossible d'enregistrer cette annonce.", "error");
     }
 }
@@ -246,7 +246,7 @@ async function toggleScheduleActive(id) {
     if (!s) return;
     s.active = !s.active;
     s.updatedAt = nowISO();
-    await db.schedule.put(s);
+    await ScheduleRepository.put(s);
     await loadScheduleData();
     renderScheduleList();
     renderScheduleSummary();
@@ -262,7 +262,7 @@ async function deleteSchedule(id) {
     if (!window.confirm(`Supprimer définitivement « ${s.title} » ?\n\nCette action est irréversible.`)) return;
 
     try {
-        await db.schedule.delete(id);
+        await ScheduleRepository.remove(id);
         await loadScheduleData();
         renderScheduleList();
         renderScheduleSummary();
@@ -271,7 +271,7 @@ async function deleteSchedule(id) {
         toast("Annonce supprimée.", "success");
         showPage("announcements");
     } catch (err) {
-        console.error(err);
+        Logger.error("schedule.deleteSchedule", err);
         toast("Impossible de supprimer cette annonce.", "error");
     }
 }
