@@ -9,7 +9,7 @@
    plutôt que de ressaisir le nom en texte libre à chaque fois.
 ============================================================ */
 async function loadClochersData() {
-    state.clochers = await db.clochers.orderBy("updatedAt").reverse().toArray();
+    state.clochers = await ClochersRepository.list();
 }
 
 function createDefaultClocher() {
@@ -162,14 +162,14 @@ async function saveClocher(e) {
     };
 
     try {
-        await db.clochers.put(clocher);
+        await ClochersRepository.put(clocher);
         await loadClochersData();
         renderClochersList();
         renderClochersSummary();
         toast(existing ? "Clocher modifié." : "Clocher ajouté.", "success");
         showClocherDetail(clocher.id);
     } catch (err) {
-        console.error(err);
+        Logger.error("clochers.saveClocher", err);
         toast("Impossible d'enregistrer ce clocher.", "error");
     }
 }
@@ -216,7 +216,7 @@ async function toggleClocherActive(id) {
     if (!c) return;
     c.active = !c.active;
     c.updatedAt = nowISO();
-    await db.clochers.put(c);
+    await ClochersRepository.put(c);
     await loadClochersData();
     renderClochersList();
     renderClochersSummary();
@@ -230,14 +230,14 @@ async function deleteClocher(id) {
     if (!window.confirm(`Supprimer définitivement « ${c.nom} » ?\n\nCette action est irréversible.`)) return;
 
     try {
-        await db.clochers.delete(id);
+        await ClochersRepository.remove(id);
         await loadClochersData();
         renderClochersList();
         renderClochersSummary();
         toast("Clocher supprimé.", "success");
         showPage("clochers");
     } catch (err) {
-        console.error(err);
+        Logger.error("clochers.deleteClocher", err);
         toast("Impossible de supprimer ce clocher.", "error");
     }
 }
