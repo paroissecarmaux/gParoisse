@@ -28,6 +28,13 @@ const TRASH_ENTITY_CONFIG = [
         titleOf: p => `${p.prenom} ${p.nom}`.trim() || "Personne",
         restore: id => restorePerson(id),
         purge: id => purgePerson(id)
+    },
+    {
+        type: "schedule",
+        stateKey: "scheduleTrash",
+        titleOf: s => s.title || "Annonce",
+        restore: id => restoreSchedule(id),
+        purge: id => purgeSchedule(id)
     }
 ];
 

@@ -10,7 +10,8 @@
    Catégories et noms de jours : voir js/constants.js.
 ============================================================ */
 async function loadScheduleData() {
-    state.schedule = await ScheduleRepository.list();
+    state.schedule = await ScheduleRepository.listActive();
+    state.scheduleTrash = await ScheduleRepository.listDeleted();
 }
 
 function renderScheduleCategoryOptions() {
@@ -100,7 +101,7 @@ function renderScheduleCard(s) {
             </div>
             <div class="request-actions">
                 <button class="icon-btn" data-action="edit" title="Modifier" aria-label="Modifier">${icon("edit")}</button>
-                <button class="icon-btn" data-action="delete" title="Supprimer" aria-label="Supprimer">${icon("trash")}</button>
+                <button class="icon-btn" data-action="delete" title="Mettre à la corbeille" aria-label="Mettre à la corbeille">${icon("trash")}</button>
             </div>
         </article>
     `;
@@ -187,6 +188,7 @@ async function saveSchedule(e) {
 
     try {
         await ScheduleRepository.put(entry);
+        await addHistory("schedule", entry.id, existing ? "update" : "create", existing ? "Annonce modifiée" : "Annonce créée");
         await loadScheduleData();
         renderScheduleList();
         renderScheduleSummary();
@@ -205,7 +207,7 @@ function showScheduleDetail(id) {
     if (!s) return;
     state.selectedScheduleId = id;
 
-    const linkedClocher = s.clocherId ? state.clochers.find(c => c.id === s.clocherId) : null;
+    const clocherLink = findLinked(state.clochers, state.clochersTrash, s.clocherId);
 
     $("#scheduleDetailTitle").textContent = `Annonces › ${s.title || "Annonce"}`;
 
@@ -227,12 +229,13 @@ function showScheduleDetail(id) {
             <dl class="fiche-grid">
                 ${ficheField("Récurrence", s.kind === "recurring" ? capitalize(WEEKDAY_NAMES[s.dayOfWeek]) : formatDate(s.date))}
                 ${ficheField("Heure", escapeHTML(s.time))}
-                ${ficheField("Lieu", linkedClocher
-                    ? `<button type="button" class="link-btn" data-goto-clocher="${escapeHTML(linkedClocher.id)}">${icon("church", "icon-inline")}${escapeHTML(linkedClocher.nom)}</button>`
+                ${ficheField("Lieu", clocherLink.status !== "none"
+                    ? linkedRecordFieldHTML(clocherLink, "data-goto-clocher", c => `${icon("church", "icon-inline")}${escapeHTML(c.nom)}`)
                     : escapeHTML(s.location), true)}
                 ${ficheField("Notes", escapeHTML(s.notes) || "Aucune note.", true)}
             </dl>
         </div>
+        ${historySectionHTML("schedule", id)}
     `;
 
     $("#scheduleDetailToggleBtn").innerHTML = s.active
@@ -247,6 +250,7 @@ async function toggleScheduleActive(id) {
     s.active = !s.active;
     s.updatedAt = nowISO();
     await ScheduleRepository.put(s);
+    await addHistory("schedule", id, s.active ? "restore" : "archive", s.active ? "Annonce réactivée" : "Annonce suspendue");
     await loadScheduleData();
     renderScheduleList();
     renderScheduleSummary();
@@ -256,23 +260,73 @@ async function toggleScheduleActive(id) {
     toast(s.active ? "Annonce réactivée." : "Annonce suspendue.", "success");
 }
 
-async function deleteSchedule(id) {
+/* ============================================================
+   CORBEILLE (V6.2.c) — même principe que js/requests.js.
+============================================================ */
+async function trashSchedule(id) {
     const s = state.schedule.find(x => x.id === id);
     if (!s) return;
-    if (!window.confirm(`Supprimer définitivement « ${s.title} » ?\n\nCette action est irréversible.`)) return;
+    if (!window.confirm(`Mettre à la corbeille « ${s.title} » ?\n\nElle pourra être restaurée depuis la Corbeille.`)) return;
 
     try {
-        await ScheduleRepository.remove(id);
+        s.deletedAt = nowISO();
+        s.updatedAt = nowISO();
+        await ScheduleRepository.put(s);
+        await addHistory("schedule", id, "trash", "Annonce mise à la corbeille");
         await loadScheduleData();
         renderScheduleList();
         renderScheduleSummary();
         renderOverview();
         renderAgenda();
-        toast("Annonce supprimée.", "success");
+        renderTrash();
+        toast("Annonce mise à la corbeille.", "success");
         showPage("announcements");
     } catch (err) {
-        Logger.error("schedule.deleteSchedule", err);
-        toast("Impossible de supprimer cette annonce.", "error");
+        Logger.error("schedule.trashSchedule", err);
+        toast("Impossible de mettre cette annonce à la corbeille.", "error");
+    }
+}
+
+async function restoreSchedule(id) {
+    const s = state.scheduleTrash.find(x => x.id === id);
+    if (!s) return;
+
+    try {
+        s.deletedAt = null;
+        s.updatedAt = nowISO();
+        await ScheduleRepository.put(s);
+        await addHistory("schedule", id, "restore", "Annonce restaurée depuis la corbeille");
+        await loadScheduleData();
+        renderScheduleList();
+        renderScheduleSummary();
+        renderOverview();
+        renderAgenda();
+        renderTrash();
+        toast("Annonce restaurée.", "success");
+    } catch (err) {
+        Logger.error("schedule.restoreSchedule", err);
+        toast("Impossible de restaurer cette annonce.", "error");
+    }
+}
+
+async function purgeSchedule(id) {
+    const s = state.scheduleTrash.find(x => x.id === id);
+    if (!s) return;
+    if (!window.confirm(`Supprimer définitivement « ${s.title} » ?\n\nCette action est IRRÉVERSIBLE : la fiche ne pourra plus être restaurée.`)) return;
+
+    try {
+        await ScheduleRepository.remove(id);
+        await addHistory("schedule", id, "purge", "Annonce supprimée définitivement");
+        await loadScheduleData();
+        renderScheduleList();
+        renderScheduleSummary();
+        renderOverview();
+        renderAgenda();
+        renderTrash();
+        toast("Annonce supprimée définitivement.", "success");
+    } catch (err) {
+        Logger.error("schedule.purgeSchedule", err);
+        toast("Impossible de supprimer définitivement cette annonce.", "error");
     }
 }
 
@@ -301,7 +355,7 @@ function initScheduleEvents() {
     $("#scheduleDetailBackBtn").addEventListener("click", goBack);
     $("#scheduleEditBtn").addEventListener("click", () => state.selectedScheduleId && showScheduleForm(state.selectedScheduleId));
     $("#scheduleDetailToggleBtn").addEventListener("click", () => state.selectedScheduleId && toggleScheduleActive(state.selectedScheduleId));
-    $("#scheduleDeleteBtn").addEventListener("click", () => state.selectedScheduleId && deleteSchedule(state.selectedScheduleId));
+    $("#scheduleDeleteBtn").addEventListener("click", () => state.selectedScheduleId && trashSchedule(state.selectedScheduleId));
 
     $("#scheduleDetailBody").addEventListener("click", e => {
         const clocherBtn = e.target.closest("[data-goto-clocher]");
@@ -318,7 +372,7 @@ function initScheduleEvents() {
 
         switch (btn.dataset.action) {
             case "edit": showScheduleForm(id); break;
-            case "delete": deleteSchedule(id); break;
+            case "delete": trashSchedule(id); break;
         }
     });
 }

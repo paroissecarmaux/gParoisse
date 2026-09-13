@@ -204,7 +204,8 @@ const DATA_MODULES = [
             { key: "location", header: "Lieu" },
             { key: "clocherId", header: "ID clocher" },
             { key: "notes", header: "Notes" },
-            { key: "active", header: "Active", type: "bool" }
+            { key: "active", header: "Active", type: "bool" },
+            { key: "deletedAt", header: "Supprimée le (corbeille)" }
         ]
     },
     {
