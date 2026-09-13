@@ -4,7 +4,7 @@
    PARAMÈTRES & SAUVEGARDE (Dexie)
 ============================================================ */
 async function loadSettings() {
-    const items = await db.settings.toArray();
+    const items = await SettingsRepository.list();
     for (const item of items) {
         if (Object.prototype.hasOwnProperty.call(state.settings, item.key)) {
             state.settings[item.key] = item.value;
@@ -17,7 +17,7 @@ async function loadSettings() {
 
 async function saveSetting(key, value) {
     state.settings[key] = value;
-    await db.settings.put({ key, value });
+    await SettingsRepository.put({ key, value });
 }
 
 async function saveSettings() {
@@ -96,7 +96,7 @@ const DATA_MODULES = [
     {
         key: "requests",
         label: "demande(s)",
-        table: () => db.requests,
+        table: () => RequestsRepository,
         stateKey: "requests",
         normalize: normalizeRequest,
         isValid: r => Boolean(r && (r.name || r.description || r.contact)),
@@ -129,7 +129,7 @@ const DATA_MODULES = [
     {
         key: "people",
         label: "personne(s)",
-        table: () => db.people,
+        table: () => PeopleRepository,
         stateKey: "people",
         normalize: p => ({ ...p, id: String(p.id || uid()) }),
         isValid: p => Boolean(p && (p.prenom || p.nom)),
@@ -174,7 +174,7 @@ const DATA_MODULES = [
     {
         key: "schedule",
         label: "annonce(s)",
-        table: () => db.schedule,
+        table: () => ScheduleRepository,
         stateKey: "schedule",
         normalize: s => ({ ...s, id: String(s.id || uid()) }),
         isValid: s => Boolean(s && s.title),
@@ -198,7 +198,7 @@ const DATA_MODULES = [
     {
         key: "clochers",
         label: "clocher(s)",
-        table: () => db.clochers,
+        table: () => ClochersRepository,
         stateKey: "clochers",
         normalize: c => ({ ...c, id: String(c.id || uid()) }),
         isValid: c => Boolean(c && c.nom),
@@ -220,7 +220,7 @@ const DATA_MODULES = [
     {
         key: "personnel",
         label: "membre(s) du personnel",
-        table: () => db.personnel,
+        table: () => PersonnelRepository,
         stateKey: "personnel",
         normalize: p => ({ ...p, id: String(p.id || uid()) }),
         isValid: p => Boolean(p && (p.prenom || p.nom)),
@@ -246,7 +246,7 @@ const DATA_MODULES = [
     {
         key: "intentions",
         label: "intention(s) de messe",
-        table: () => db.intentions,
+        table: () => IntentionsRepository,
         stateKey: "intentions",
         normalize: i => ({ ...i, id: String(i.id || uid()) }),
         isValid: i => Boolean(i && i.intitule),
@@ -363,7 +363,7 @@ async function importModuleCSVFile(file) {
         renderAgenda();
         toast(`${records.length} ${m.label} importé(s) depuis le CSV${skipped ? ` · ${skipped} ligne(s) ignorée(s)` : ""}.`, "success");
     } catch (err) {
-        console.error(err);
+        Logger.error("settings.importModuleCSVFile", err);
         toast("Import CSV impossible : " + err.message, "error");
     }
 }
@@ -420,7 +420,7 @@ async function importFile(file) {
         renderAgenda();
         toast(`Import terminé : ${summary}.`, "success");
     } catch (err) {
-        console.error(err);
+        Logger.error("settings.importFile", err);
         toast("Import impossible : " + err.message, "error");
     }
 }
@@ -430,7 +430,7 @@ async function clearDatabase() {
         toast("Effacement annulé.");
         return;
     }
-    await db.history.clear();
+    await HistoryRepository.clear();
     for (const m of DATA_MODULES) await m.table().clear();
     for (const m of DATA_MODULES) await m.load();
     DATA_MODULES.forEach(m => m.render());
