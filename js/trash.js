@@ -35,6 +35,13 @@ const TRASH_ENTITY_CONFIG = [
         titleOf: s => s.title || "Annonce",
         restore: id => restoreSchedule(id),
         purge: id => purgeSchedule(id)
+    },
+    {
+        type: "clocher",
+        stateKey: "clochersTrash",
+        titleOf: c => c.nom || "Clocher",
+        restore: id => restoreClocher(id),
+        purge: id => purgeClocher(id)
     }
 ];
 

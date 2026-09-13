@@ -229,7 +229,8 @@ const DATA_MODULES = [
             { key: "saintPatron", header: "Saint patron" },
             { key: "fetePatronale", header: "Fête patronale" },
             { key: "notes", header: "Notes" },
-            { key: "active", header: "Active", type: "bool" }
+            { key: "active", header: "Active", type: "bool" },
+            { key: "deletedAt", header: "Supprimé le (corbeille)" }
         ]
     },
     {

@@ -9,7 +9,8 @@
    plutôt que de ressaisir le nom en texte libre à chaque fois.
 ============================================================ */
 async function loadClochersData() {
-    state.clochers = await ClochersRepository.list();
+    state.clochers = await ClochersRepository.listActive();
+    state.clochersTrash = await ClochersRepository.listDeleted();
 }
 
 function createDefaultClocher() {
@@ -89,7 +90,7 @@ function renderClocherCard(c) {
             </div>
             <div class="request-actions">
                 <button class="icon-btn" data-action="edit" title="Modifier" aria-label="Modifier">${icon("edit")}</button>
-                <button class="icon-btn" data-action="delete" title="Supprimer" aria-label="Supprimer">${icon("trash")}</button>
+                <button class="icon-btn" data-action="delete" title="Mettre à la corbeille" aria-label="Mettre à la corbeille">${icon("trash")}</button>
             </div>
         </article>
     `;
@@ -163,6 +164,7 @@ async function saveClocher(e) {
 
     try {
         await ClochersRepository.put(clocher);
+        await addHistory("clocher", clocher.id, existing ? "update" : "create", existing ? "Clocher modifié" : "Clocher créé");
         await loadClochersData();
         renderClochersList();
         renderClochersSummary();
@@ -203,6 +205,7 @@ function showClocherDetail(id) {
                 ${ficheField("Notes", escapeHTML(c.notes) || "Aucune note.", true)}
             </dl>
         </div>
+        ${historySectionHTML("clocher", id)}
     `;
 
     $("#clocherDetailToggleBtn").innerHTML = c.active
@@ -217,6 +220,7 @@ async function toggleClocherActive(id) {
     c.active = !c.active;
     c.updatedAt = nowISO();
     await ClochersRepository.put(c);
+    await addHistory("clocher", id, c.active ? "restore" : "archive", c.active ? "Clocher réactivé" : "Clocher désactivé");
     await loadClochersData();
     renderClochersList();
     renderClochersSummary();
@@ -234,22 +238,70 @@ function clocherLinkedRecordsWarning(c) {
     ]);
 }
 
-async function deleteClocher(id) {
+/* ============================================================
+   CORBEILLE (V6.2.c) — même principe que js/requests.js. Les demandes/
+   annonces/intentions qui référencent ce clocher gardent leur
+   clocherId intact (voir findLinked() dans js/utils.js).
+============================================================ */
+async function trashClocher(id) {
     const c = state.clochers.find(x => x.id === id);
     if (!c) return;
     const warning = clocherLinkedRecordsWarning(c);
-    if (!window.confirm(`${warning}\n\nSupprimer définitivement « ${c.nom} » ?\n\nCette action est irréversible.`)) return;
+    if (!window.confirm(`${warning}\n\nMettre à la corbeille « ${c.nom} » ?\n\nIl pourra être restauré depuis la Corbeille.`)) return;
 
     try {
-        await ClochersRepository.remove(id);
+        c.deletedAt = nowISO();
+        c.updatedAt = nowISO();
+        await ClochersRepository.put(c);
+        await addHistory("clocher", id, "trash", "Clocher mis à la corbeille");
         await loadClochersData();
         renderClochersList();
         renderClochersSummary();
-        toast("Clocher supprimé.", "success");
+        renderTrash();
+        toast("Clocher mis à la corbeille.", "success");
         showPage("clochers");
     } catch (err) {
-        Logger.error("clochers.deleteClocher", err);
-        toast("Impossible de supprimer ce clocher.", "error");
+        Logger.error("clochers.trashClocher", err);
+        toast("Impossible de mettre ce clocher à la corbeille.", "error");
+    }
+}
+
+async function restoreClocher(id) {
+    const c = state.clochersTrash.find(x => x.id === id);
+    if (!c) return;
+
+    try {
+        c.deletedAt = null;
+        c.updatedAt = nowISO();
+        await ClochersRepository.put(c);
+        await addHistory("clocher", id, "restore", "Clocher restauré depuis la corbeille");
+        await loadClochersData();
+        renderClochersList();
+        renderClochersSummary();
+        renderTrash();
+        toast("Clocher restauré.", "success");
+    } catch (err) {
+        Logger.error("clochers.restoreClocher", err);
+        toast("Impossible de restaurer ce clocher.", "error");
+    }
+}
+
+async function purgeClocher(id) {
+    const c = state.clochersTrash.find(x => x.id === id);
+    if (!c) return;
+    if (!window.confirm(`Supprimer définitivement « ${c.nom} » ?\n\nCette action est IRRÉVERSIBLE : la fiche ne pourra plus être restaurée.`)) return;
+
+    try {
+        await ClochersRepository.remove(id);
+        await addHistory("clocher", id, "purge", "Clocher supprimé définitivement");
+        await loadClochersData();
+        renderClochersList();
+        renderClochersSummary();
+        renderTrash();
+        toast("Clocher supprimé définitivement.", "success");
+    } catch (err) {
+        Logger.error("clochers.purgeClocher", err);
+        toast("Impossible de supprimer définitivement ce clocher.", "error");
     }
 }
 
@@ -270,7 +322,7 @@ function initClochersEvents() {
     $("#clocherDetailBackBtn").addEventListener("click", goBack);
     $("#clocherEditBtn").addEventListener("click", () => state.selectedClocherId && showClocherForm(state.selectedClocherId));
     $("#clocherDetailToggleBtn").addEventListener("click", () => state.selectedClocherId && toggleClocherActive(state.selectedClocherId));
-    $("#clocherDeleteBtn").addEventListener("click", () => state.selectedClocherId && deleteClocher(state.selectedClocherId));
+    $("#clocherDeleteBtn").addEventListener("click", () => state.selectedClocherId && trashClocher(state.selectedClocherId));
 
     $("#clocherList").addEventListener("click", e => {
         const btn = e.target.closest("[data-action]");
@@ -282,7 +334,7 @@ function initClochersEvents() {
 
         switch (btn.dataset.action) {
             case "edit": showClocherForm(id); break;
-            case "delete": deleteClocher(id); break;
+            case "delete": trashClocher(id); break;
         }
     });
 }
