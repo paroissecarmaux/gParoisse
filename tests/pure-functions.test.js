@@ -763,5 +763,110 @@ test("computeDirectoryMigration: seconde exécution -> aucune duplication (idemp
     assert.strictEqual(second.report.skipped, 2);
 });
 
+/* ---------- js/core/directory.js : interface Annuaire (V6.8.b) ---------- */
+
+test("directoryMatchesQuery: trouve par prénom/nom/téléphone/email/adresse", () => {
+    const entry = { prenom: "Marie", nom: "Dupont", telephone: "0601020304", email: "marie@example.org", adresse: "12 rue de l'Église" };
+    assert.strictEqual(context.directoryMatchesQuery(entry, context.normalize("dupont")), true);
+    assert.strictEqual(context.directoryMatchesQuery(entry, context.normalize("0601020304")), true);
+    assert.strictEqual(context.directoryMatchesQuery(entry, context.normalize("église")), true);
+    assert.strictEqual(context.directoryMatchesQuery(entry, context.normalize("introuvable")), false);
+});
+test("directoryMatchesQuery: requête vide -> tout correspond", () => {
+    assert.strictEqual(context.directoryMatchesQuery({ prenom: "Jean", nom: "Martin" }, ""), true);
+});
+
+test("directoryMatchesRoleFilter: 'all' ou vide -> tout correspond", () => {
+    const entry = { roles: [{ type: "benevole", active: true }] };
+    assert.strictEqual(context.directoryMatchesRoleFilter(entry, "all"), true);
+    assert.strictEqual(context.directoryMatchesRoleFilter(entry, null), true);
+});
+test("directoryMatchesRoleFilter: 'no_role' -> seulement les entrées sans rôle", () => {
+    assert.strictEqual(context.directoryMatchesRoleFilter({ roles: [] }, "no_role"), true);
+    assert.strictEqual(context.directoryMatchesRoleFilter({ roles: [{ type: "contact", active: true }] }, "no_role"), false);
+});
+test("directoryMatchesRoleFilter: filtre par type -> reprend hasRole (au moins une instance active)", () => {
+    const entry = { roles: [{ type: "benevole", active: true }, { type: "benevole", active: false }] };
+    assert.strictEqual(context.directoryMatchesRoleFilter(entry, "benevole"), true);
+    assert.strictEqual(context.directoryMatchesRoleFilter(entry, "salarie"), false);
+});
+
+test("hasNoRole: roles vide -> true", () => {
+    assert.strictEqual(context.hasNoRole({ roles: [] }), true);
+});
+test("hasNoRole: au moins un rôle -> false", () => {
+    assert.strictEqual(context.hasNoRole({ roles: [{ type: "contact", active: true }] }), false);
+});
+
+test("buildRoleInstance: prépare un objet rôle à partir de valeurs de champs déjà lues", () => {
+    const role = context.buildRoleInstance("benevole", { domaine: "Catéchèse" }, true);
+    assert.strictEqual(role.type, "benevole");
+    assert.strictEqual(role.active, true);
+    assert.strictEqual(role.domaine, "Catéchèse");
+});
+test("buildRoleInstance: active !== false -> toujours actif par défaut", () => {
+    assert.strictEqual(context.buildRoleInstance("contact", {}, undefined).active, true);
+    assert.strictEqual(context.buildRoleInstance("contact", {}, false).active, false);
+});
+
+test("updateDirectoryIdentity: modifie l'identité sans toucher aux rôles", () => {
+    const entry = { id: "d1", prenom: "Jean", nom: "Dupont", roles: [{ type: "benevole", active: true }] };
+    const updated = context.updateDirectoryIdentity(entry, { prenom: "Jean-Paul" });
+    assert.strictEqual(updated.id, "d1");
+    assert.strictEqual(updated.prenom, "Jean-Paul");
+    assert.strictEqual(updated.roles.length, 1);
+    assert.strictEqual(updated.roles[0].type, "benevole");
+});
+
+test("upsertRole/removeRoleAt/setRoleActive/getRolesByType : scénario complet (bénévole actif + bénévole terminé + clergé)", () => {
+    const entry = {
+        id: "d2",
+        roles: [
+            { type: "benevole", active: true, domaine: "Liturgie" },
+            { type: "benevole", active: false, domaine: "Catéchèse" },
+            { type: "clerge", active: true, etatCanonique: "Prêtre" }
+        ]
+    };
+
+    // Le filtre "bénévole" fonctionne (au moins une instance active).
+    assert.strictEqual(context.hasRole(entry, "benevole"), true);
+    // Les deux instances bénévole restent présentes.
+    assert.strictEqual(context.getRolesByType(entry, "benevole").length, 2);
+    // Le rôle clergé reste présent.
+    assert.strictEqual(context.hasRole(entry, "clerge"), true);
+
+    // Modifier le bénévole actif (index 0) ne détruit pas le bénévole
+    // terminé (index 1) ni le clergé (index 2).
+    const modified = context.upsertRole(entry, 0, { type: "benevole", active: true, domaine: "Accueil" });
+    assert.strictEqual(modified.roles.length, 3);
+    assert.strictEqual(modified.roles[0].domaine, "Accueil");
+    assert.strictEqual(modified.roles[1].domaine, "Catéchèse");
+    assert.strictEqual(modified.roles[1].active, false);
+    assert.strictEqual(modified.roles[2].type, "clerge");
+
+    // Désactiver l'instance 0 ne touche pas les autres.
+    const deactivated = context.setRoleActive(entry, 0, false);
+    assert.strictEqual(deactivated.roles[0].active, false);
+    assert.strictEqual(deactivated.roles[1].active, false);
+    assert.strictEqual(deactivated.roles[2].active, true);
+
+    // Supprimer l'instance 1 ne touche pas les instances 0 et 2.
+    const removed = context.removeRoleAt(entry, 1);
+    assert.strictEqual(removed.roles.length, 2);
+    assert.strictEqual(removed.roles[0].domaine, "Liturgie");
+    assert.strictEqual(removed.roles[1].type, "clerge");
+
+    // L'entrée originale n'a jamais été mutée (fonctions pures).
+    assert.strictEqual(entry.roles.length, 3);
+    assert.strictEqual(entry.roles[0].domaine, "Liturgie");
+});
+
+test("createDefaultDirectoryEntry: roles vide, aucun rôle ajouté automatiquement", () => {
+    const entry = context.createDefaultDirectoryEntry("person");
+    assert.strictEqual(entry.entityType, "person");
+    assertSameStructure(entry.roles, []);
+    assert.strictEqual(entry.deletedAt, null);
+});
+
 console.log(`\n${passed} test(s) réussi(s), ${failed} échec(s).`);
 if (failed > 0) process.exit(1);

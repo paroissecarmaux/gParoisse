@@ -89,7 +89,7 @@ Risque : faible à moyen — le format change, mais la conversion est un simple 
 ## V6.8 — Implémentation de l'Annuaire (sous-phasée)
 
 - **V6.8.a — Fondations et migration** : **✅ COMPLET** (2026-09-13, voir `docs/V6.8-A-ANNUAIRE-FONDATIONS.md`). `db.version(11)` (table `directory`, additive), `personToDirectoryEntry()`/`personnelToDirectoryEntry()`, `hasRole()`/`getRolesByType()`, migration idempotente exécutée au démarrage (id conservés, aucune fusion automatique, `people`/`personnel` intactes et toujours actives). 108 tests (78 → 108).
-- **V6.8.b — Module Annuaire** : non commencé. Nouvelle interface liste/détail/formulaire unifiée, badges de rôle, filtres.
+- **V6.8.b — Module Annuaire** : **✅ COMPLET** (2026-09-13, voir `docs/V6.8-B-ANNUAIRE-INTERFACE.md`). Nouvel écran `js/annuaire.js` : liste/recherche/filtres par rôle, fiche détail, formulaire identité, gestion complète des rôles (ajout/modification/désactivation/suppression d'instance, plusieurs instances du même type conservées), corbeille (réutilise `js/trash.js`), historique (`entityType: "directory"`). `people.js`/`personnel.js` inchangés. 120 tests (108 → 120). Aucun test manuel en navigateur (pas d'environnement disponible).
 - **V6.8.c — Intégration transverse** : non commencé. Bascule de `requests.personId`/`intentions.personId`/`intentions.personnelId`, historique, corbeille, recherche globale, diagnostic d'intégrité étendu, import/export, retrait des raccourcis pointant encore vers `people.js`/`personnel.js`.
 
 ## V6.9 — Stabilisation de l'Annuaire (proposé, non commencé)

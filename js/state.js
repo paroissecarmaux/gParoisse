@@ -31,20 +31,24 @@ const state = {
     clocherQuickFilter: null,
     personnelQuickFilter: null,
     intentionQuickFilter: null,
+    directoryQuickFilter: null,
     peoplePage: 1,
     requestsPage: 1,
+    directoryPage: 1,
     selectedId: null,
     selectedPersonId: null,
     selectedScheduleId: null,
     selectedClocherId: null,
     selectedPersonnelId: null,
     selectedIntentionId: null,
+    selectedDirectoryId: null,
     requestFormMode: "new",
     personFormMode: "new",
     scheduleFormMode: "new",
     clocherFormMode: "new",
     personnelFormMode: "new",
     intentionFormMode: "new",
+    directoryFormMode: "new",
     agendaView: "week",
     agendaDate: todayISO(),
     agendaRangeStart: startOfWeekISO(todayISO()),
@@ -92,6 +96,9 @@ const PAGE_SECTION = {
     "intentions": "intentions",
     "intention-detail": "intentions",
     "intention-form": "intentions",
+    "annuaire": "annuaire",
+    "annuaire-detail": "annuaire",
+    "annuaire-form": "annuaire",
     "agenda": "agenda",
     "trash": "trash",
     "settings": "settings"
@@ -142,6 +149,8 @@ function pageBackTarget(page) {
         case "personnel-form": return state.personnelFormMode === "edit" ? "personnel-detail" : "personnel";
         case "intention-detail": return "intentions";
         case "intention-form": return state.intentionFormMode === "edit" ? "intention-detail" : "intentions";
+        case "annuaire-detail": return "annuaire";
+        case "annuaire-form": return state.directoryFormMode === "edit" ? "annuaire-detail" : "annuaire";
         default: return null;
     }
 }

@@ -83,6 +83,9 @@
         <button class="nav-item" data-page="intentions" type="button" aria-selected="false">
             <svg class="icon"><use href="#i-candle"></use></svg> Intentions de messe
         </button>
+        <button class="nav-item" data-page="annuaire" type="button" aria-selected="false">
+            <svg class="icon"><use href="#i-person"></use></svg> Annuaire
+        </button>
         <button class="nav-item" data-page="people" type="button" aria-selected="false">
             <svg class="icon"><use href="#i-person"></use></svg> Membres
         </button>
@@ -489,6 +492,180 @@
             <div class="panel-footer">
                 <button type="button" class="btn" id="requestFormCancelBtn">Annuler</button>
                 <button type="submit" class="btn btn-primary"><svg class="icon"><use href="#i-check"></use></svg> Enregistrer</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+<!-- ============================================================
+     ANNUAIRE — LISTE (V6.8.b)
+============================================================ -->
+<div class="view-page" data-page="annuaire" hidden>
+
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Annuaire</h2>
+            <p class="page-description">
+                Personnes et organisations de la paroisse, avec leurs rôles (registre, clergé, salarié,
+                bénévole, contact, fournisseur, association).
+            </p>
+        </div>
+        <div class="settings-actions">
+            <button class="btn btn-primary" id="newDirectoryBtn"><svg class="icon"><use href="#i-plus"></use></svg> Nouvelle personne</button>
+        </div>
+    </div>
+
+    <section class="kpis" id="annuaireKpis" aria-label="Indicateurs">
+        <button type="button" class="kpi total" data-kpi="all">
+            <div class="kpi-top">
+                <span class="kpi-label">Toutes les entrées</span>
+                <div class="kpi-icon" aria-hidden="true"><svg class="icon"><use href="#i-person"></use></svg></div>
+            </div>
+            <div class="kpi-value" id="annuaireStatTotal">0</div>
+            <div class="kpi-note">Actives dans l'annuaire</div>
+        </button>
+        <button type="button" class="kpi progress" data-kpi="registre">
+            <div class="kpi-top"><span class="kpi-label">Registre</span></div>
+            <div class="kpi-value" id="annuaireStatRegistre">0</div>
+        </button>
+        <button type="button" class="kpi progress" data-kpi="clerge">
+            <div class="kpi-top"><span class="kpi-label">Clergé</span></div>
+            <div class="kpi-value" id="annuaireStatClerge">0</div>
+        </button>
+        <button type="button" class="kpi normal" data-kpi="salarie">
+            <div class="kpi-top"><span class="kpi-label">Salariés</span></div>
+            <div class="kpi-value" id="annuaireStatSalarie">0</div>
+        </button>
+        <button type="button" class="kpi normal" data-kpi="benevole">
+            <div class="kpi-top"><span class="kpi-label">Bénévoles</span></div>
+            <div class="kpi-value" id="annuaireStatBenevole">0</div>
+        </button>
+        <button type="button" class="kpi normal" data-kpi="contact">
+            <div class="kpi-top"><span class="kpi-label">Contacts</span></div>
+            <div class="kpi-value" id="annuaireStatContact">0</div>
+        </button>
+        <button type="button" class="kpi normal" data-kpi="fournisseur">
+            <div class="kpi-top"><span class="kpi-label">Fournisseurs</span></div>
+            <div class="kpi-value" id="annuaireStatFournisseur">0</div>
+        </button>
+        <button type="button" class="kpi normal" data-kpi="association">
+            <div class="kpi-top"><span class="kpi-label">Associations</span></div>
+            <div class="kpi-value" id="annuaireStatAssociation">0</div>
+        </button>
+        <button type="button" class="kpi archived" data-kpi="no_role">
+            <div class="kpi-top"><span class="kpi-label">Rôle à déterminer</span></div>
+            <div class="kpi-value" id="annuaireStatNoRole">0</div>
+        </button>
+    </section>
+
+    <section class="panel">
+        <div class="toolbar people-toolbar">
+            <div class="search">
+                <span class="search-icon" aria-hidden="true"><svg class="icon"><use href="#i-search"></use></svg></span>
+                <input id="annuaireSearchInput" type="search" placeholder="Rechercher un nom, prénom, téléphone, e-mail, adresse…" autocomplete="off" aria-label="Rechercher dans l'annuaire">
+            </div>
+        </div>
+
+        <div class="result-count" id="annuaireResultCount" aria-live="polite"></div>
+        <div id="annuaireList" class="request-list" role="list"></div>
+        <div id="annuairePagination" class="pagination"></div>
+    </section>
+
+</div>
+
+<!-- ============================================================
+     ANNUAIRE — DÉTAIL (V6.8.b)
+============================================================ -->
+<div class="view-page" data-page="annuaire-detail" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="annuaireDetailBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+            <div>
+                <h2 class="page-title" id="annuaireDetailTitle">Annuaire</h2>
+            </div>
+        </div>
+        <div class="settings-actions">
+            <button class="btn" id="annuaireEditBtn"><svg class="icon"><use href="#i-edit"></use></svg> Modifier l'identité</button>
+            <button class="btn btn-danger" id="annuaireDeleteBtn"><svg class="icon"><use href="#i-trash"></use></svg> Mettre à la corbeille</button>
+        </div>
+    </div>
+    <div id="annuaireDetailBody"></div>
+</div>
+
+<!-- ============================================================
+     ANNUAIRE — FORMULAIRE IDENTITÉ (V6.8.b)
+============================================================ -->
+<div class="view-page" data-page="annuaire-form" hidden>
+    <div class="page-header">
+        <div class="page-header-title">
+            <button class="icon-btn" id="annuaireFormBackBtn" aria-label="Retour" title="Retour"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+            <div>
+                <h2 class="page-title" id="annuaireFormTitle">Nouvelle personne</h2>
+            </div>
+        </div>
+    </div>
+    <section class="panel">
+        <form id="annuaireForm">
+            <div class="panel-body">
+                <input type="hidden" id="directoryId">
+                <div class="form-grid">
+                    <div class="form-section-title">Identité</div>
+                    <div class="field">
+                        <label for="directoryPrenom">Prénom</label>
+                        <input id="directoryPrenom" placeholder="Prénom">
+                    </div>
+                    <div class="field">
+                        <label for="directoryNom">Nom *</label>
+                        <input id="directoryNom" placeholder="Nom">
+                    </div>
+                    <div class="field">
+                        <label for="directoryDateNaissance">Date de naissance</label>
+                        <input id="directoryDateNaissance" type="date">
+                    </div>
+                    <div class="field">
+                        <label for="directoryLieuNaissance">Lieu de naissance</label>
+                        <input id="directoryLieuNaissance">
+                    </div>
+                    <div class="field">
+                        <label for="directoryDateDeces">Date de décès</label>
+                        <input id="directoryDateDeces" type="date">
+                    </div>
+                    <div class="field">
+                        <label for="directoryPere">Père</label>
+                        <input id="directoryPere">
+                    </div>
+                    <div class="field">
+                        <label for="directoryMere">Mère</label>
+                        <input id="directoryMere">
+                    </div>
+
+                    <div class="form-section-title">Coordonnées</div>
+                    <div class="field">
+                        <label for="directoryTelephone">Téléphone</label>
+                        <input id="directoryTelephone">
+                    </div>
+                    <div class="field">
+                        <label for="directoryEmail">E-mail</label>
+                        <input id="directoryEmail" type="email">
+                    </div>
+                    <div class="field full">
+                        <label for="directoryAdresse">Adresse</label>
+                        <input id="directoryAdresse">
+                    </div>
+                    <div class="field full">
+                        <label for="directoryNotes">Notes</label>
+                        <textarea id="directoryNotes" placeholder="Informations complémentaires…"></textarea>
+                    </div>
+                </div>
+                <p class="field-help">
+                    Les rôles (registre, clergé, salarié, bénévole, contact, fournisseur, association) se
+                    gèrent depuis la fiche détaillée, après enregistrement de l'identité.
+                </p>
+            </div>
+            <div class="panel-footer">
+                <button type="button" class="btn" id="annuaireFormCancelBtn">Annuler</button>
+                <button type="submit" class="btn btn-primary"><svg class="icon"><use href="#i-check"></use></svg> Enregistrer</button>
+                <button type="submit" class="btn" data-action="save-and-new">Enregistrer et créer une autre</button>
             </div>
         </form>
     </section>
@@ -1661,6 +1838,7 @@
 <script src="js/clochers.js"></script>
 <script src="js/personnel.js"></script>
 <script src="js/intentions.js"></script>
+<script src="js/annuaire.js"></script>
 <script src="js/trash.js"></script>
 <script src="js/overview.js"></script>
 <script src="js/agenda.js"></script>

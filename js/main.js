@@ -98,6 +98,7 @@ async function init() {
     initClochersEvents();
     initPersonnelEvents();
     initIntentionsEvents();
+    initAnnuaireEvents();
     initTrashEvents();
     initOverviewEvents();
     initAgendaEvents();
@@ -121,12 +122,10 @@ async function init() {
         await loadClochersData();
         await loadPersonnelData();
         await loadIntentionsData();
-        // V6.8.a : fondations de l'Annuaire (docs/V6.7-ANNUAIRE-DESIGN.md).
         // Migration additive et idempotente people/personnel -> directory
-        // (aucun écran ne lit encore state.directory) — voir
-        // js/core/directory.js. Exécutée à chaque démarrage : sans effet
-        // une fois tout migré, reprend toute fiche people/personnel créée
-        // depuis (les deux modules restent actifs pendant cette phase).
+        // (js/core/directory.js, V6.8.a), puis rendu de l'écran Annuaire
+        // (js/annuaire.js, V6.8.b) — coexiste avec people.js/personnel.js,
+        // toujours actifs pour leurs propres tables et pages.
         await migratePeopleAndPersonnelToDirectory();
         await loadDirectoryData();
         renderRequestsSummary();
@@ -141,6 +140,8 @@ async function init() {
         renderPersonnelSummary();
         renderIntentionsList();
         renderIntentionsSummary();
+        renderDirectoryList();
+        renderDirectorySummary();
         renderTrash();
         renderOverview();
         renderAgenda();

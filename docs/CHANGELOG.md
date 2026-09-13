@@ -2,6 +2,15 @@
 
 Suit la numérotation de `docs/ROADMAP.md`, pas de dates de release — chaque phase peut s'étaler sur plusieurs sessions. Rédigé à partir de l'historique git réel et des documents d'implémentation (`docs/REVIEW-V6.0-V6.1.md`, `docs/V6.2-C-IMPLEMENTATION.md`), pas d'une mémoire reconstruite.
 
+## V6.8.b — Interface Annuaire unifiée
+
+- Nouvel écran « Annuaire » (`js/annuaire.js`) : liste avec recherche/filtres par rôle/KPI, fiche détail, formulaire identité, gestion complète des rôles cumulables (ajout, modification, désactivation, suppression d'instance) — plusieurs instances du même rôle restent indépendantes et conservées.
+- `roles: []` affiché explicitement comme anomalie (« Rôle à déterminer »), jamais masqué ni corrigé automatiquement.
+- Réutilise tel quel le mécanisme de corbeille généralisé (7ᵉ entrée dans `js/trash.js`) et l'historique généralisé (`entityType: "directory"`) — aucune structure parallèle créée.
+- `js/core/directory.js` complété avec les fonctions pures nécessaires à l'UI (`createDefaultDirectoryEntry`, `updateDirectoryIdentity`, `upsertRole`, `removeRoleAt`, `setRoleActive`, `buildRoleInstance`, `hasNoRole`, `directoryMatchesQuery`, `directoryMatchesRoleFilter`).
+- `people.js`/`personnel.js` inchangés, toujours actifs ; aucune référence croisée (`personId`/`personnelId`), recherche globale, diagnostic ou import/export basculé — réservé à V6.8.c.
+- 120 tests (108 → 120). Voir `docs/V6.8-B-ANNUAIRE-INTERFACE.md`.
+
 ## V6.8.a — Fondations et migration de l'Annuaire
 
 - Nouvelle table Dexie `directory` (`db.version(11)`, additive) — `people`/`personnel` inchangées, toujours actives.

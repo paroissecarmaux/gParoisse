@@ -73,7 +73,7 @@ const INTENTION_STATUS = ["À célébrer", "Célébrée", "Annulée"];
 
 /* --- Historique & corbeille (V6.2.c) — vocabulaire contrôlé, jamais
    de texte libre, pour rester exploitable (ex. filtrer par action) --- */
-const ENTITY_TYPES = ["request", "person", "schedule", "clocher", "personnel", "intention"];
+const ENTITY_TYPES = ["request", "person", "schedule", "clocher", "personnel", "intention", "directory"];
 
 // "restore" sert à la fois pour une demande désarchivée et pour un
 // enregistrement restauré depuis la corbeille : un seul mot pour une
@@ -93,7 +93,12 @@ const ENTITY_TYPE_LABELS = {
     schedule: "Annonce",
     clocher: "Clocher",
     personnel: "Personnel",
-    intention: "Intention"
+    intention: "Intention",
+    // V6.8.b : nouvelles entrées d'historique/corbeille de l'Annuaire
+    // (js/annuaire.js). Les anciennes entrées "person"/"personnel"
+    // (people.js/personnel.js, toujours actifs) gardent leurs libellés
+    // ci-dessus tels quels — aucune des deux valeurs n'est retirée.
+    directory: "Annuaire"
 };
 
 /* --- Annuaire (V6.8.a) — vocabulaire contrôlé, purement descriptif

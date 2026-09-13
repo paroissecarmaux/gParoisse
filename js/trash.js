@@ -56,6 +56,17 @@ const TRASH_ENTITY_CONFIG = [
         titleOf: i => i.intitule || i.type || "Intention",
         restore: id => restoreIntention(id),
         purge: id => purgeIntention(id)
+    },
+    {
+        // V6.8.b : Annuaire (js/annuaire.js). Coexiste avec "person"/
+        // "personnel" ci-dessus (people.js/personnel.js restent actifs et
+        // ont leur propre corbeille, séparée) — pas une bascule, un 7ᵉ
+        // module de plus dans le même registre générique.
+        type: "directory",
+        stateKey: "directoryTrash",
+        titleOf: e => directoryDisplayName(e),
+        restore: id => restoreDirectoryEntry(id),
+        purge: id => purgeDirectoryEntry(id)
     }
 ];
 

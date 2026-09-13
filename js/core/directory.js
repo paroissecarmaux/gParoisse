@@ -193,6 +193,90 @@ function getRolesByType(entry, roleType) {
     return (entry?.roles || []).filter(r => r.type === roleType);
 }
 
+// Une entrée sans aucun rôle est valide techniquement (ex. tout juste
+// créée, ou héritée d'une migration V6.8.a qui n'a pas pu en déduire
+// un) mais reste une anomalie à corriger — jamais supprimée
+// automatiquement, seulement signalée (V6.8.b §5).
+function hasNoRole(entry) {
+    return !(entry?.roles?.length);
+}
+
+/* ============================================================
+   CRÉATION / MODIFICATION (V6.8.b) — fonctions pures, testables sans
+   DOM ni Dexie. Chacune renvoie une NOUVELLE entrée (l'original n'est
+   jamais muté) ; c'est ce qui évite le piège "entry.roles = [x]" qui
+   écraserait les autres rôles au lieu de n'en modifier qu'un.
+============================================================ */
+function createDefaultDirectoryEntry(entityType) {
+    const now = nowISO();
+    return {
+        id: uid(),
+        entityType: entityType || "person",
+        prenom: "", nom: "",
+        dateNaissance: "", lieuNaissance: "", dateDeces: "", pere: "", mere: "",
+        telephone: "", email: "", adresse: "", notes: "",
+        // Volontairement vide : ne jamais ajouter un rôle par défaut
+        // (ex. "contact") sans demande explicite de l'utilisateur.
+        roles: [],
+        createdAt: now, updatedAt: now, deletedAt: null
+    };
+}
+
+// Modifie uniquement les champs d'identité fournis ; `roles` est
+// recopié tel quel (même contenu, jamais recalculé ni vidé) — la
+// fiche identité ne doit jamais pouvoir toucher aux rôles.
+function updateDirectoryIdentity(entry, identityFields) {
+    return { ...entry, ...identityFields, roles: entry.roles, updatedAt: nowISO() };
+}
+
+// Construit un objet rôle à partir de valeurs déjà extraites d'un
+// formulaire (readRoleFieldsFromForm(), js/annuaire.js) — reste pure
+// en recevant des valeurs déjà lues plutôt que d'aller chercher le DOM.
+function buildRoleInstance(roleType, fieldValues, active) {
+    return { type: roleType, active: active !== false, ...(fieldValues || {}) };
+}
+
+// Ajoute (roleIndex null/undefined) ou remplace (roleIndex) un rôle,
+// tous les autres restant inchangés à leur place — jamais
+// `roles = [roleObject]`.
+function upsertRole(entry, roleIndex, roleObject) {
+    const roles = (entry.roles || []).slice();
+    if (roleIndex === null || roleIndex === undefined) roles.push(roleObject);
+    else roles[roleIndex] = roleObject;
+    return { ...entry, roles, updatedAt: nowISO() };
+}
+
+// Retire uniquement l'instance à roleIndex, les autres sont conservées.
+function removeRoleAt(entry, roleIndex) {
+    return { ...entry, roles: (entry.roles || []).filter((_, i) => i !== roleIndex), updatedAt: nowISO() };
+}
+
+// Bascule active/inactive sur une seule instance, les autres (même du
+// même type) restent inchangées.
+function setRoleActive(entry, roleIndex, active) {
+    const roles = (entry.roles || []).map((r, i) => (i === roleIndex ? { ...r, active } : r));
+    return { ...entry, roles, updatedAt: nowISO() };
+}
+
+/* ============================================================
+   RECHERCHE & FILTRAGE (V6.8.b) — fonctions pures réutilisées par
+   js/annuaire.js pour la liste principale.
+============================================================ */
+function directoryMatchesQuery(entry, normalizedQuery) {
+    if (!normalizedQuery) return true;
+    const haystack = normalize([entry.prenom, entry.nom, entry.telephone, entry.email, entry.adresse].join(" "));
+    return haystack.includes(normalizedQuery);
+}
+
+// roleFilter "all"/vide -> tout ; "no_role" -> uniquement les entrées
+// sans aucun rôle (voir hasNoRole) ; sinon -> hasRole() sur ce type
+// (au moins une instance active suffit, cf. §5.2/§7 de la conception).
+function directoryMatchesRoleFilter(entry, roleFilter) {
+    if (!roleFilter || roleFilter === "all") return true;
+    if (roleFilter === "no_role") return hasNoRole(entry);
+    return hasRole(entry, roleFilter);
+}
+
 /* ============================================================
    MIGRATION people + personnel -> directory
    Additive et idempotente : ne modifie jamais people/personnel, ne
