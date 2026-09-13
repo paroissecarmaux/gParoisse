@@ -71,7 +71,11 @@ function normalizeRequest(raw) {
         archived: Boolean(raw.archived),
         createdAt: raw.createdAt || raw.dateCreation || now,
         updatedAt: raw.updatedAt || raw.dateModification || now,
-        completedAt: raw.completedAt || null
+        completedAt: raw.completedAt || null,
+        // Explicite (pas de spread ici) : sans cette ligne, un import
+        // JSON/CSV réinitialiserait silencieusement toute demande en
+        // corbeille comme active (V6.2.c).
+        deletedAt: raw.deletedAt || null
     };
 }
 

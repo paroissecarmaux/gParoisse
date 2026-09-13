@@ -102,6 +102,7 @@ const DATA_MODULES = [
         label: "demande(s)",
         table: () => RequestsRepository,
         stateKey: "requests",
+        trashKey: "requestsTrash",
         normalize: normalizeRequest,
         isValid: r => Boolean(r && (r.name || r.description || r.contact)),
         requiredLabel: "Nom, description ou contact",
@@ -128,7 +129,8 @@ const DATA_MODULES = [
             { key: "personId", header: "ID personne" },
             { key: "clocherId", header: "ID clocher" },
             { key: "createdAt", header: "Créée le" },
-            { key: "updatedAt", header: "Modifiée le" }
+            { key: "updatedAt", header: "Modifiée le" },
+            { key: "deletedAt", header: "Supprimée le (corbeille)" }
         ]
     },
     {
@@ -136,6 +138,7 @@ const DATA_MODULES = [
         label: "personne(s)",
         table: () => PeopleRepository,
         stateKey: "people",
+        trashKey: "peopleTrash",
         normalize: p => ({ ...p, id: String(p.id || uid()) }),
         isValid: p => Boolean(p && (p.prenom || p.nom)),
         requiredLabel: "Prénom ou nom",
@@ -174,7 +177,8 @@ const DATA_MODULES = [
             { key: "conjoint", header: "Conjoint(e)" },
             { key: "role", header: "Rôle" },
             { key: "groupe", header: "Groupe" },
-            { key: "notes", header: "Notes" }
+            { key: "notes", header: "Notes" },
+            { key: "deletedAt", header: "Supprimée le (corbeille)" }
         ]
     },
     {
@@ -182,6 +186,7 @@ const DATA_MODULES = [
         label: "annonce(s)",
         table: () => ScheduleRepository,
         stateKey: "schedule",
+        trashKey: "scheduleTrash",
         normalize: s => ({ ...s, id: String(s.id || uid()) }),
         isValid: s => Boolean(s && s.title),
         requiredLabel: "Titre",
@@ -207,6 +212,7 @@ const DATA_MODULES = [
         label: "clocher(s)",
         table: () => ClochersRepository,
         stateKey: "clochers",
+        trashKey: "clochersTrash",
         normalize: c => ({ ...c, id: String(c.id || uid()) }),
         isValid: c => Boolean(c && c.nom),
         requiredLabel: "Nom",
@@ -230,6 +236,7 @@ const DATA_MODULES = [
         label: "membre(s) du personnel",
         table: () => PersonnelRepository,
         stateKey: "personnel",
+        trashKey: "personnelTrash",
         normalize: p => ({ ...p, id: String(p.id || uid()) }),
         isValid: p => Boolean(p && (p.prenom || p.nom)),
         requiredLabel: "Prénom ou nom",
@@ -257,6 +264,7 @@ const DATA_MODULES = [
         label: "intention(s) de messe",
         table: () => IntentionsRepository,
         stateKey: "intentions",
+        trashKey: "intentionsTrash",
         normalize: i => ({ ...i, id: String(i.id || uid()) }),
         isValid: i => Boolean(i && i.intitule),
         requiredLabel: "Intitulé",
@@ -281,6 +289,15 @@ const DATA_MODULES = [
     }
 ];
 
+// V6.2.c : une sauvegarde (JSON ou CSV) doit rester fidèle à la
+// corbeille, pas seulement aux éléments actifs — state[m.stateKey] ne
+// contient plus que les actifs depuis listActive(). trashKey est
+// encore vide pour les modules qui n'ont pas encore leur corbeille
+// (V6.2.c section 11), donc sans effet tant qu'ils ne l'ont pas.
+function allRecordsFor(m) {
+    return state[m.stateKey].concat(state[m.trashKey] || []);
+}
+
 async function exportJSON() {
     const payload = {
         app: "Paroisse · Secrétariat",
@@ -288,7 +305,7 @@ async function exportJSON() {
         exportedAt: nowISO(),
         settings: state.settings
     };
-    DATA_MODULES.forEach(m => { payload[m.key] = state[m.stateKey]; });
+    DATA_MODULES.forEach(m => { payload[m.key] = allRecordsFor(m); });
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
     downloadBlob(blob, `paroisse-sauvegarde-${todayISO()}.json`);
     await saveSetting("lastBackup", nowISO());
@@ -320,7 +337,7 @@ function exportModuleCSV(key) {
     const m = DATA_MODULES.find(x => x.key === key);
     if (!m) return;
     const headers = m.csvFields.map(f => f.header);
-    const rows = state[m.stateKey].map(item => m.csvFields.map(f => csvFieldToValue(item, f)));
+    const rows = allRecordsFor(m).map(item => m.csvFields.map(f => csvFieldToValue(item, f)));
     const csv = "﻿" + [headers, ...rows].map(row => row.map(csvEscape).join(";")).join("\r\n");
     downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `paroisse-${key}-${todayISO()}.csv`);
     toast(`Export CSV « ${m.label} » créé.`, "success");
@@ -366,7 +383,7 @@ async function importModuleCSVFile(file) {
                 }
             });
 
-            const existing = raw.id ? state[m.stateKey].find(x => x.id === raw.id) : null;
+            const existing = raw.id ? allRecordsFor(m).find(x => x.id === raw.id) : null;
             const record = m.normalize({ ...(existing || m.createDefault()), ...raw });
             if (existing) record.id = existing.id;
             record.updatedAt = now;
@@ -435,7 +452,7 @@ async function importFile(file) {
         // milliers d'enregistrements.
         if (state.importMode === "merge") {
             DATA_MODULES.forEach(m => {
-                const existingIds = new Set(state[m.stateKey].map(e => e.id));
+                const existingIds = new Set(allRecordsFor(m).map(e => e.id));
                 imported[m.key].forEach(item => { if (existingIds.has(item.id)) item.id = uid(); });
             });
         }
