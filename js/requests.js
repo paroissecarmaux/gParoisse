@@ -416,7 +416,11 @@ function showRequestDetail(id) {
     if (!r) return;
     state.selectedId = id;
 
-    const personLink = findLinked(state.people, state.peopleTrash, r.personId);
+    // V6.8.c : résolu depuis l'Annuaire en priorité (repli vers l'ancienne
+    // table people si l'entrée n'y est pas encore — voir
+    // resolveDirectoryPerson(), js/core/directory.js). `personId` n'a pas
+    // changé de nom ni de contenu, seule la source de résolution change.
+    const personLink = resolveDirectoryPerson(r.personId);
     const clocherLink = findLinked(state.clochers, state.clochersTrash, r.clocherId);
 
     $("#requestDetailTitle").textContent = `Demandes › ${r.name || "Demande sans nom"}`;
@@ -697,7 +701,14 @@ function initRequestsEvents() {
 
     $("#requestDetailBody").addEventListener("click", e => {
         const personBtn = e.target.closest("[data-goto-person]");
-        if (personBtn) { showPersonDetail(personBtn.dataset.gotoPerson); return; }
+        if (personBtn) {
+            // V6.8.c : ouvre la fiche Annuaire quand le lien a été résolu
+            // via directory ; repli sur l'ancienne fiche Personne pour une
+            // référence encore seulement legacy (voir resolveDirectoryPerson()).
+            if (personBtn.dataset.gotoSource === "directory") showDirectoryDetail(personBtn.dataset.gotoPerson);
+            else showPersonDetail(personBtn.dataset.gotoPerson);
+            return;
+        }
         const clocherBtn = e.target.closest("[data-goto-clocher]");
         if (clocherBtn) showClocherDetail(clocherBtn.dataset.gotoClocher);
     });

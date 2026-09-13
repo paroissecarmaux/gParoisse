@@ -201,6 +201,14 @@ function hasNoRole(entry) {
     return !(entry?.roles?.length);
 }
 
+// Nom affichable d'une entrée, quel que soit son entityType — utilisé
+// par js/annuaire.js, js/search.js et js/diagnostics.js (V6.8.c) :
+// centralisé ici plutôt que dupliqué dans chacun.
+function directoryDisplayName(entry) {
+    if (entry.entityType === "organization") return entry.nom || "Organisation sans nom";
+    return `${entry.prenom || ""} ${entry.nom || ""}`.trim() || "Sans nom";
+}
+
 /* ============================================================
    CRÉATION / MODIFICATION (V6.8.b) — fonctions pures, testables sans
    DOM ni Dexie. Chacune renvoie une NOUVELLE entrée (l'original n'est
@@ -336,4 +344,65 @@ async function migratePeopleAndPersonnelToDirectory() {
 async function loadDirectoryData() {
     state.directory = await DirectoryRepository.listActive();
     state.directoryTrash = await DirectoryRepository.listDeleted();
+}
+
+/* ============================================================
+   RÉSOLUTION D'IDENTITÉ (V6.8.c)
+   requests.personId / intentions.personId / intentions.personnelId
+   gardent leur nom et leur contenu tels quels — seule la source
+   utilisée pour AFFICHER l'identité correspondante change : `directory`
+   en priorité, avec repli vers les anciennes tables people/personnel
+   pour compatibilité (jamais l'inverse, jamais de création automatique
+   d'une entrée directory manquante — voir
+   docs/V6.8-C-ANNUAIRE-INTEGRATION.md §"Compatibilité legacy").
+
+   Pourquoi un repli est nécessaire malgré la migration id-préservante
+   de V6.8.a : cette migration tourne une fois par démarrage
+   (js/main.js). Une fiche people/personnel créée depuis les écrans
+   historiques (toujours actifs) PENDANT la session n'a pas encore
+   d'équivalent dans `directory` tant que l'app n'a pas redémarré — le
+   repli couvre exactement cette fenêtre, en plus des sauvegardes
+   anciennes déjà rencontrées. Aucune écriture n'a lieu ici : une
+   résolution ne doit jamais modifier la base.
+============================================================ */
+
+// Cœur pur (ne lit jamais `state`) : testable avec des tableaux
+// construits à la main. `options.expectRoles`, si fourni, ne rejette
+// pas le lien mais signale `roleMismatch` (utilisé par le diagnostic,
+// V6.8.c) — uniquement pertinent quand la résolution vient de
+// `directory` : un enregistrement legacy `personnel` n'a pas de
+// `roles`, la notion ne s'y applique pas.
+function resolveDirectoryEntity(id, directoryActive, directoryTrash, legacyActive, legacyTrash, options) {
+    options = options || {};
+    if (!id) return { record: null, status: "none", source: null, legacy: false, roleMismatch: false };
+
+    const link = findLinked(directoryActive, directoryTrash, id);
+    if (link.status === "active" || link.status === "trashed") {
+        const roleMismatch = Boolean(options.expectRoles) && !options.expectRoles.some(r => hasRole(link.record, r));
+        return { ...link, source: "directory", legacy: false, roleMismatch };
+    }
+    if (link.status === "none") return { ...link, source: null, legacy: false, roleMismatch: false };
+
+    // status === "missing" côté directory : repli legacy, jamais de
+    // création automatique.
+    const legacyLink = findLinked(legacyActive || [], legacyTrash || [], id);
+    if (legacyLink.status === "active" || legacyLink.status === "trashed") {
+        return { ...legacyLink, source: options.legacySourceLabel || "legacy", legacy: true, roleMismatch: false };
+    }
+    return { record: null, status: "missing", source: null, legacy: false, roleMismatch: false };
+}
+
+// Enveloppes lisant l'état global — utilisées par les modules UI
+// (js/requests.js, js/intentions.js) et le diagnostic (js/diagnostics.js).
+function resolveDirectoryPerson(id) {
+    return resolveDirectoryEntity(id, state.directory, state.directoryTrash, state.people, state.peopleTrash, {
+        legacySourceLabel: "people"
+    });
+}
+
+function resolveDirectoryPersonnel(id) {
+    return resolveDirectoryEntity(id, state.directory, state.directoryTrash, state.personnel, state.personnelTrash, {
+        legacySourceLabel: "personnel",
+        expectRoles: ["clerge", "salarie", "benevole"]
+    });
 }

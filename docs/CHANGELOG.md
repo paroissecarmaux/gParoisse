@@ -2,6 +2,17 @@
 
 Suit la numérotation de `docs/ROADMAP.md`, pas de dates de release — chaque phase peut s'étaler sur plusieurs sessions. Rédigé à partir de l'historique git réel et des documents d'implémentation (`docs/REVIEW-V6.0-V6.1.md`, `docs/V6.2-C-IMPLEMENTATION.md`), pas d'une mémoire reconstruite.
 
+## V6.8.c — Intégration transverse de l'Annuaire
+
+- Nouveau helper central de résolution (`resolveDirectoryEntity()`/`resolveDirectoryPerson()`/`resolveDirectoryPersonnel()`, `js/core/directory.js`) : `requests.personId`/`intentions.personId`/`intentions.personnelId` sont désormais résolus en priorité contre `directory`, avec repli explicite vers les anciennes tables `people`/`personnel` (jamais l'inverse, jamais de création automatique d'une entrée manquante).
+- Aucune donnée réécrite : la migration id-préservante de V6.8.a suffit — toute référence déjà valide contre `people`/`personnel` reste valide contre `directory` sans migration supplémentaire.
+- Recherche globale : les sources « Membres »/« Personnel » remplacées par une source unique « Annuaire » (évite les doublons visuels, chaque fiche n'existant plus qu'une fois côté recherche).
+- Diagnostic d'intégrité étendu : structure des entrées `directory` (entityType, roles, rôle, active), entrées sans rôle, et doublons **potentiels** entre une entrée issue de `people` et une issue de `personnel` partageant nom/prénom — jamais fusionnés automatiquement.
+- Tableau de bord : KPI « Membres » renommé « Annuaire », défini explicitement comme le nombre d'entrées `directory` actives de type personne (généralisation directe de l'ancien comptage, qui ne distinguait déjà pas paroissiens/contacts).
+- `directory` ajoutée à l'export/import JSON global (`DATA_MODULES`) — sans rien changer côté ancien format, toujours importable.
+- `people`, `personnel`, leurs écrans et leurs repositories restent intacts et pleinement fonctionnels.
+- 137 tests (121 → 137). Voir `docs/V6.8-C-ANNUAIRE-INTEGRATION.md`.
+
 ## V6.8.b — Interface Annuaire unifiée
 
 - Nouvel écran « Annuaire » (`js/annuaire.js`) : liste avec recherche/filtres par rôle/KPI, fiche détail, formulaire identité, gestion complète des rôles cumulables (ajout, modification, désactivation, suppression d'instance) — plusieurs instances du même rôle restent indépendantes et conservées.

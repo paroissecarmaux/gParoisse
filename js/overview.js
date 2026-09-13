@@ -202,7 +202,15 @@ function renderOverview() {
     const todoItems = buildTodayTodoItems();
     renderAnnounceList("#overviewTodoList", todoItems, renderTodoItem, "Rien à faire pour l'instant : aucune demande urgente, aucun événement ni intention à célébrer aujourd'hui.");
 
-    $("#overviewPeopleCount").textContent = state.people.length;
+    // V6.8.c : reflète désormais l'Annuaire plutôt que la seule table
+    // people — définition retenue : toutes les entrées actives de type
+    // "person", quel que soit leur rôle (y compris aucun), la
+    // généralisation la plus directe de l'ancien state.people.length (qui
+    // comptait déjà paroissiens ET contacts sans distinction). Une fiche
+    // créée depuis les écrans historiques pendant la session en cours
+    // n'est comptée qu'au prochain démarrage (migration idempotente,
+    // voir docs/V6.8-C-ANNUAIRE-INTEGRATION.md).
+    $("#overviewPeopleCount").textContent = state.directory.filter(e => e.entityType === "person").length;
     $("#overviewPendingCount").textContent = state.requests.filter(r => !r.archived && r.status === "En attente").length;
     $("#overviewAlertCount").textContent = state.requests.filter(r => !r.archived && (r.priority === "Urgente" || isOverdue(r))).length;
     $("#overviewAnnounceCount").textContent = obseques.length + messes.length + horaires.length + anniversaires.length + intentions.length;
@@ -214,7 +222,7 @@ function renderOverview() {
    ÉVÉNEMENTS
 ============================================================ */
 function handleOverviewKpiClick(kind) {
-    if (kind === "people") { showPage("people"); return; }
+    if (kind === "annuaire") { showPage("annuaire"); return; }
     if (kind === "pending") { showPage("requests"); filterRequestsByKpi("En attente"); return; }
     if (kind === "alert") { showPage("requests"); filterRequestsByKpi("alert"); return; }
     if (kind === "announce") {
@@ -234,7 +242,10 @@ function initOverviewEvents() {
 
     $("#overviewNewRequestBtn").addEventListener("click", () => showRequestForm(null));
     $("#overviewNewIntentionBtn").addEventListener("click", () => showIntentionForm(null));
-    $("#overviewNewPersonBtn").addEventListener("click", () => showPersonForm(null));
+    // V6.8.c : ouvre désormais le formulaire Annuaire, cohérent avec le
+    // KPI "Annuaire" juste au-dessus — la fiche Membres reste accessible
+    // depuis la sidebar pour qui en a encore besoin pendant la transition.
+    $("#overviewNewPersonBtn").addEventListener("click", () => showDirectoryForm(null));
     $("#overviewBackupBtn").addEventListener("click", exportJSON);
 
     $("#overviewTodoList").addEventListener("click", e => {

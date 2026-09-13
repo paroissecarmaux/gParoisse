@@ -15,31 +15,143 @@
 // Un lien "manquant" ici est exactement ce que findLinked() (js/utils.js)
 // affiche déjà comme "Introuvable (supprimé définitivement)" sur une
 // fiche isolée — ce diagnostic ne fait qu'agréger ce même repérage sur
-// l'ensemble des 6 modules en un seul endroit, plutôt que d'obliger à
+// l'ensemble des modules en un seul endroit, plutôt que d'obliger à
 // ouvrir chaque fiche une par une pour le découvrir.
+//
+// V6.8.c : personId/personnelId (requests, intentions) passent par
+// resolveDirectoryPerson()/resolveDirectoryPersonnel() (js/core/directory.js)
+// plutôt que par un findLinked() direct sur people/personnel — cela
+// détecte, en plus du lien cassé, deux cas nouveaux : une référence
+// encore résolue uniquement via l'ancien registre ("legacy" — sera
+// reprise dans l'Annuaire au prochain démarrage) et un célébrant dont
+// l'entrée Annuaire n'a aucun rôle clerge/salarie/benevole. clocherId
+// n'est pas concerné (les clochers ne font pas partie de l'Annuaire) et
+// continue de passer par findLinked() directement.
 function checkReferenceIntegrity() {
     const findings = [];
 
-    function checkLink(entityType, entityLabel, records, field, targetActive, targetTrash) {
+    function checkClocherLink(entityType, entityLabel, records, field) {
         records.forEach(r => {
             if (!r[field]) return;
-            const link = findLinked(targetActive, targetTrash, r[field]);
+            const link = findLinked(state.clochers, state.clochersTrash, r[field]);
             if (link.status === "missing") {
                 findings.push({
                     entityType,
                     entityId: r.id,
-                    message: `${entityLabel} « ${escapeHTML(r.name || r.title || r.intitule || r.id)} » référence un(e) ${field.replace("Id", "")} introuvable (définitivement supprimé(e)).`
+                    message: `${entityLabel} « ${escapeHTML(r.name || r.title || r.intitule || r.id)} » référence un(e) clocher introuvable (définitivement supprimé(e)).`
                 });
             }
         });
     }
 
-    checkLink("request", "Demande", state.requests, "personId", state.people, state.peopleTrash);
-    checkLink("request", "Demande", state.requests, "clocherId", state.clochers, state.clochersTrash);
-    checkLink("schedule", "Annonce", state.schedule, "clocherId", state.clochers, state.clochersTrash);
-    checkLink("intention", "Intention", state.intentions, "personId", state.people, state.peopleTrash);
-    checkLink("intention", "Intention", state.intentions, "clocherId", state.clochers, state.clochersTrash);
-    checkLink("intention", "Intention", state.intentions, "personnelId", state.personnel, state.personnelTrash);
+    function checkDirectoryLink(entityType, entityLabel, records, field, resolver) {
+        records.forEach(r => {
+            if (!r[field]) return;
+            const link = resolver(r[field]);
+            const name = escapeHTML(r.name || r.title || r.intitule || r.id);
+            const what = field.replace("Id", "");
+            if (link.status === "missing") {
+                findings.push({
+                    entityType,
+                    entityId: r.id,
+                    message: `${entityLabel} « ${name} » référence un(e) ${what} introuvable (définitivement supprimé(e), même dans l'ancien registre).`
+                });
+            } else if (link.legacy) {
+                findings.push({
+                    entityType,
+                    entityId: r.id,
+                    message: `${entityLabel} « ${name} » référence une fiche pas encore présente dans l'Annuaire (résolue via l'ancien registre « ${escapeHTML(link.source)} ») — sera reprise automatiquement au prochain démarrage.`
+                });
+            } else if (link.roleMismatch) {
+                findings.push({
+                    entityType,
+                    entityId: r.id,
+                    message: `${entityLabel} « ${name} » référence une entrée de l'Annuaire sans rôle clergé/salarié/bénévole alors qu'un célébrant était attendu.`
+                });
+            }
+        });
+    }
+
+    checkDirectoryLink("request", "Demande", state.requests, "personId", resolveDirectoryPerson);
+    checkClocherLink("request", "Demande", state.requests, "clocherId");
+    checkClocherLink("schedule", "Annonce", state.schedule, "clocherId");
+    checkDirectoryLink("intention", "Intention", state.intentions, "personId", resolveDirectoryPerson);
+    checkClocherLink("intention", "Intention", state.intentions, "clocherId");
+    checkDirectoryLink("intention", "Intention", state.intentions, "personnelId", resolveDirectoryPersonnel);
+
+    return findings;
+}
+
+// V6.8.c : cohérence structurelle des entrées `directory` elles-mêmes
+// (entityType connu, roles est bien un tableau, chaque rôle a un type
+// connu et un `active` booléen s'il est renseigné).
+function checkDirectoryStructure() {
+    const findings = [];
+
+    state.directory.forEach(e => {
+        const name = escapeHTML(directoryDisplayName(e));
+
+        if (!DIRECTORY_ENTITY_TYPES.includes(e.entityType)) {
+            findings.push({ entityType: "directory", entityId: e.id, message: `« ${name} » a un entityType inconnu : « ${escapeHTML(String(e.entityType))} ».` });
+        }
+
+        if (!Array.isArray(e.roles)) {
+            findings.push({ entityType: "directory", entityId: e.id, message: `« ${name} » a un champ roles invalide (devrait être une liste).` });
+            return;
+        }
+
+        e.roles.forEach((r, i) => {
+            if (!DIRECTORY_ROLE_TYPES.includes(r.type)) {
+                findings.push({ entityType: "directory", entityId: e.id, message: `« ${name} » a un rôle inconnu à la position ${i} : « ${escapeHTML(String(r.type))} ».` });
+            }
+            if (r.active !== undefined && typeof r.active !== "boolean") {
+                findings.push({ entityType: "directory", entityId: e.id, message: `« ${name} » a un rôle « ${escapeHTML(String(r.type))} » avec un champ active non booléen.` });
+            }
+        });
+    });
+
+    return findings;
+}
+
+// Signale les entrées sans aucun rôle (roles: []) — anomalie valide
+// techniquement mais à corriger manuellement (voir js/annuaire.js,
+// V6.8.b), jamais corrigée automatiquement ici.
+function checkDirectoryNoRole() {
+    return state.directory.filter(hasNoRole).map(e => ({
+        entityType: "directory",
+        entityId: e.id,
+        message: `« ${escapeHTML(directoryDisplayName(e))} » n'a aucun rôle déterminé — à corriger depuis sa fiche.`
+    }));
+}
+
+// V6.8.c : la migration V6.8.a n'a jamais fusionné une entrée issue de
+// `people` avec une entrée issue de `personnel`, même homonyme — signale
+// un DOUBLON POTENTIEL (jamais confirmé, jamais fusionné) quand deux
+// entrées `directory` de provenances différentes partagent nom/prénom.
+// Heuristique nom seul (pas nom+date de naissance comme
+// checkPossibleDuplicates() ci-dessous) : une entrée issue de
+// `personnel` n'a jamais de date de naissance, l'exiger empêcherait ce
+// contrôle de détecter précisément le cas qu'il vise.
+function checkDirectoryPossibleDuplicates() {
+    const findings = [];
+    const seenByName = new Map();
+
+    state.directory.forEach(e => {
+        if (e.entityType !== "person") return;
+        const key = normalize(`${e.prenom} ${e.nom}`).trim();
+        if (!key) return;
+
+        const other = seenByName.get(key);
+        if (other && other.migratedFrom !== e.migratedFrom) {
+            findings.push({
+                entityType: "directory",
+                entityId: e.id,
+                message: `Doublon potentiel : « ${escapeHTML(directoryDisplayName(e))} » existe à la fois comme entrée issue de « ${escapeHTML(other.migratedFrom || "?")} » (${escapeHTML(other.id)}) et de « ${escapeHTML(e.migratedFrom || "?")} » (${escapeHTML(e.id)}) — à vérifier et fusionner manuellement si nécessaire, jamais automatiquement.`
+            });
+        } else if (!other) {
+            seenByName.set(key, e);
+        }
+    });
 
     return findings;
 }
@@ -140,7 +252,10 @@ function runIntegrityCheck() {
         ...checkReferenceIntegrity(),
         ...checkEnumValues(),
         ...checkInvalidDates(),
-        ...checkPossibleDuplicates()
+        ...checkPossibleDuplicates(),
+        ...checkDirectoryStructure(),
+        ...checkDirectoryNoRole(),
+        ...checkDirectoryPossibleDuplicates()
     ];
 }
 

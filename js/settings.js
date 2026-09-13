@@ -290,6 +290,26 @@ const DATA_MODULES = [
             { key: "notes", header: "Notes" },
             { key: "deletedAt", header: "Supprimée le (corbeille)", type: "date" }
         ]
+    },
+    {
+        // V6.8.c : Annuaire (js/annuaire.js). `roles` est un tableau
+        // d'objets imbriqué — ne se prête pas à des colonnes CSV plates
+        // (pas de csvFields ici, volontairement) ; l'export/import JSON,
+        // qui préserve les structures imbriquées telles quelles, reste le
+        // chemin pris en charge pour cette table. Un export CSV pourra
+        // être ajouté plus tard si un besoin réel se présente.
+        key: "directory",
+        label: "entrée(s) d'annuaire",
+        table: () => DirectoryRepository,
+        stateKey: "directory",
+        trashKey: "directoryTrash",
+        normalize: e => ({ ...e, id: String(e.id || uid()), roles: Array.isArray(e.roles) ? e.roles : [] }),
+        isValid: e => Boolean(e && (e.prenom || e.nom)),
+        requiredLabel: "Prénom, nom ou raison sociale",
+        load: loadDirectoryData,
+        render: () => { renderDirectorySummary(); renderDirectoryList(); },
+        createDefault: () => createDefaultDirectoryEntry("person"),
+        csvFields: []
     }
 ];
 

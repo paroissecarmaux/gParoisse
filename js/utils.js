@@ -191,9 +191,17 @@ function findLinked(activeList, trashList, id) {
 // définitivement supprimé = message neutre. `dataAttr` est l'attribut
 // complet ("data-goto-person", …), `labelFn` reçoit le record trouvé et
 // doit renvoyer du HTML déjà échappé.
+// V6.8.c : `link.source`/`link.legacy` (posés par resolveDirectoryPerson()/
+// resolveDirectoryPersonnel(), js/core/directory.js) sont optionnels —
+// absents pour un lien résolu par findLinked() seul (ex. un clocher),
+// auquel cas le comportement reste strictement identique à avant.
+// `data-goto-source` permet au gestionnaire de clic d'ouvrir la bonne
+// fiche (Annuaire si "directory", ancienne fiche people/personnel sinon).
 function linkedRecordFieldHTML(link, dataAttr, labelFn) {
+    const sourceAttr = link.source ? ` data-goto-source="${escapeHTML(link.source)}"` : "";
+    const legacyTitle = link.legacy ? ` title="Résolu(e) depuis l'ancien registre — sera repris dans l'Annuaire au prochain démarrage"` : "";
     if (link.status === "active") {
-        return `<button type="button" class="link-btn" ${dataAttr}="${escapeHTML(link.record.id)}">${labelFn(link.record)}</button>`;
+        return `<button type="button" class="link-btn" ${dataAttr}="${escapeHTML(link.record.id)}"${sourceAttr}${legacyTitle}>${labelFn(link.record)}</button>`;
     }
     if (link.status === "trashed") {
         return `<span class="badge cancelled">${labelFn(link.record)} — dans la corbeille</span>`;

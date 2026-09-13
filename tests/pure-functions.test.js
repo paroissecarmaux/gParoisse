@@ -477,6 +477,7 @@ test("checkReferenceIntegrity: lien vers une fiche définitivement supprimée ->
     context.state = {
         requests: [{ id: "r1", name: "Dupont", personId: "p-missing", clocherId: "" }],
         people: [], peopleTrash: [],
+        directory: [], directoryTrash: [],
         clochers: [], clochersTrash: [],
         schedule: [], intentions: [], personnel: [], personnelTrash: []
     };
@@ -484,10 +485,14 @@ test("checkReferenceIntegrity: lien vers une fiche définitivement supprimée ->
     assert.strictEqual(findings.length, 1);
     assert.strictEqual(findings[0].entityType, "request");
 });
+// V6.8.c : personId est résolu en priorité depuis `directory` (voir
+// resolveDirectoryPerson()) — la fixture inclut donc désormais une
+// entrée directory correspondante, comme après une migration réelle.
 test("checkReferenceIntegrity: lien vers une fiche active -> rien signalé", () => {
     context.state = {
         requests: [{ id: "r1", name: "Dupont", personId: "p1", clocherId: "" }],
-        people: [{ id: "p1", prenom: "Jean", nom: "Dupont" }], peopleTrash: [],
+        people: [], peopleTrash: [],
+        directory: [{ id: "p1", entityType: "person", prenom: "Jean", nom: "Dupont", roles: [] }], directoryTrash: [],
         clochers: [], clochersTrash: [],
         schedule: [], intentions: [], personnel: [], personnelTrash: []
     };
@@ -496,11 +501,24 @@ test("checkReferenceIntegrity: lien vers une fiche active -> rien signalé", () 
 test("checkReferenceIntegrity: lien vers une fiche en corbeille -> rien signalé (restaurable, pas cassé)", () => {
     context.state = {
         requests: [{ id: "r1", name: "Dupont", personId: "p1", clocherId: "" }],
-        people: [], peopleTrash: [{ id: "p1", prenom: "Jean", nom: "Dupont" }],
+        people: [], peopleTrash: [],
+        directory: [], directoryTrash: [{ id: "p1", entityType: "person", prenom: "Jean", nom: "Dupont", roles: [] }],
         clochers: [], clochersTrash: [],
         schedule: [], intentions: [], personnel: [], personnelTrash: []
     };
     assertSameStructure(context.checkReferenceIntegrity(), []);
+});
+test("checkReferenceIntegrity: référence legacy (pas encore dans l'Annuaire) -> signalée, pas une simple absence", () => {
+    context.state = {
+        requests: [{ id: "r1", name: "Dupont", personId: "p1", clocherId: "" }],
+        people: [{ id: "p1", prenom: "Jean", nom: "Dupont" }], peopleTrash: [],
+        directory: [], directoryTrash: [],
+        clochers: [], clochersTrash: [],
+        schedule: [], intentions: [], personnel: [], personnelTrash: []
+    };
+    const findings = context.checkReferenceIntegrity();
+    assert.strictEqual(findings.length, 1);
+    assert.ok(findings[0].message.includes("Annuaire"));
 });
 
 test("checkEnumValues: statut de demande hors vocabulaire -> signalé", () => {
@@ -866,6 +884,112 @@ test("createDefaultDirectoryEntry: roles vide, aucun rôle ajouté automatiqueme
     assert.strictEqual(entry.entityType, "person");
     assertSameStructure(entry.roles, []);
     assert.strictEqual(entry.deletedAt, null);
+});
+
+/* ---------- resolveDirectoryEntity / resolveDirectoryPerson / resolveDirectoryPersonnel (V6.8.c) ---------- */
+
+test("resolveDirectoryEntity: trouvé dans directory -> source directory, non legacy", () => {
+    const result = context.resolveDirectoryEntity("p1", [{ id: "p1", roles: [] }], [], [], [], {});
+    assert.strictEqual(result.status, "active");
+    assert.strictEqual(result.source, "directory");
+    assert.strictEqual(result.legacy, false);
+});
+test("resolveDirectoryEntity: absent de directory, trouvé dans la source legacy -> repli, marqué legacy", () => {
+    const result = context.resolveDirectoryEntity("p1", [], [], [{ id: "p1", prenom: "Jean" }], [], { legacySourceLabel: "people" });
+    assert.strictEqual(result.status, "active");
+    assert.strictEqual(result.source, "people");
+    assert.strictEqual(result.legacy, true);
+});
+test("resolveDirectoryEntity: absent de directory, absent de la source legacy -> missing", () => {
+    assert.strictEqual(context.resolveDirectoryEntity("p1", [], [], [], [], {}).status, "missing");
+});
+test("resolveDirectoryEntity: aucun id -> none", () => {
+    assert.strictEqual(context.resolveDirectoryEntity("", [], [], [], [], {}).status, "none");
+});
+test("resolveDirectoryEntity: jamais de création automatique — la source legacy n'est jamais modifiée", () => {
+    const legacy = [{ id: "p1", prenom: "Jean" }];
+    context.resolveDirectoryEntity("p2", [], [], legacy, [], {});
+    assert.strictEqual(legacy.length, 1);
+});
+test("resolveDirectoryEntity: expectRoles non satisfait -> roleMismatch signalé, lien conservé", () => {
+    const result = context.resolveDirectoryEntity("p1", [{ id: "p1", roles: [{ type: "contact", active: true }] }], [], [], [], { expectRoles: ["clerge", "salarie", "benevole"] });
+    assert.strictEqual(result.status, "active");
+    assert.strictEqual(result.roleMismatch, true);
+});
+test("resolveDirectoryEntity: expectRoles satisfait -> pas de roleMismatch", () => {
+    const result = context.resolveDirectoryEntity("p1", [{ id: "p1", roles: [{ type: "benevole", active: true }] }], [], [], [], { expectRoles: ["clerge", "salarie", "benevole"] });
+    assert.strictEqual(result.roleMismatch, false);
+});
+
+test("resolveDirectoryPerson: résout via state.directory en priorité", () => {
+    context.state = { directory: [{ id: "p1", prenom: "Jean", nom: "Dupont", roles: [] }], directoryTrash: [], people: [], peopleTrash: [] };
+    assert.strictEqual(context.resolveDirectoryPerson("p1").source, "directory");
+});
+test("resolveDirectoryPerson: repli sur state.people si absent de directory", () => {
+    context.state = { directory: [], directoryTrash: [], people: [{ id: "p1", prenom: "Jean", nom: "Dupont" }], peopleTrash: [] };
+    const result = context.resolveDirectoryPerson("p1");
+    assert.strictEqual(result.legacy, true);
+    assert.strictEqual(result.source, "people");
+});
+test("resolveDirectoryPersonnel: repli sur state.personnel si absent de directory", () => {
+    context.state = { directory: [], directoryTrash: [], personnel: [{ id: "e1", prenom: "Paul", nom: "Martin" }], personnelTrash: [] };
+    const result = context.resolveDirectoryPersonnel("e1");
+    assert.strictEqual(result.legacy, true);
+    assert.strictEqual(result.source, "personnel");
+});
+test("resolveDirectoryPersonnel: aucune source -> missing", () => {
+    context.state = { directory: [], directoryTrash: [], personnel: [], personnelTrash: [] };
+    assert.strictEqual(context.resolveDirectoryPersonnel("x").status, "missing");
+});
+
+/* ---------- js/diagnostics.js : extensions Annuaire (V6.8.c) ---------- */
+
+test("checkDirectoryStructure: entityType/roles/rôle/active invalides -> tous signalés", () => {
+    context.state = {
+        directory: [
+            { id: "d1", entityType: "alien", roles: [] },
+            { id: "d2", entityType: "person", roles: "not-an-array" },
+            { id: "d3", entityType: "person", roles: [{ type: "invalide", active: true }] },
+            { id: "d4", entityType: "person", roles: [{ type: "contact", active: "oui" }] }
+        ]
+    };
+    assert.strictEqual(context.checkDirectoryStructure().length, 4);
+});
+test("checkDirectoryStructure: entrée valide -> rien signalé", () => {
+    context.state = { directory: [{ id: "d1", entityType: "person", roles: [{ type: "contact", active: true }] }] };
+    assertSameStructure(context.checkDirectoryStructure(), []);
+});
+
+test("checkDirectoryNoRole: signale les entrées sans rôle, pas les autres", () => {
+    context.state = { directory: [{ id: "d1", roles: [] }, { id: "d2", roles: [{ type: "contact", active: true }] }] };
+    const findings = context.checkDirectoryNoRole();
+    assert.strictEqual(findings.length, 1);
+    assert.strictEqual(findings[0].entityId, "d1");
+});
+
+test("checkDirectoryPossibleDuplicates: people + personnel homonymes -> doublon potentiel, jamais fusionné", () => {
+    context.state = {
+        directory: [
+            { id: "ABC", entityType: "person", prenom: "Jean", nom: "Dupont", migratedFrom: "people", roles: [{ type: "registre", active: true }] },
+            { id: "XYZ", entityType: "person", prenom: "Jean", nom: "Dupont", migratedFrom: "personnel", roles: [{ type: "clerge", active: true, etatCanonique: "Prêtre" }] }
+        ]
+    };
+    const findings = context.checkDirectoryPossibleDuplicates();
+    assert.strictEqual(findings.length, 1);
+    assert.ok(findings[0].message.includes("Doublon potentiel"));
+    // Les deux entrées existent toujours séparément : aucune fusion.
+    assert.strictEqual(context.state.directory.length, 2);
+    assert.strictEqual(context.state.directory[0].id, "ABC");
+    assert.strictEqual(context.state.directory[1].id, "XYZ");
+});
+test("checkDirectoryPossibleDuplicates: même provenance -> hors de ce contrôle (déjà couvert par checkPossibleDuplicates)", () => {
+    context.state = {
+        directory: [
+            { id: "A", entityType: "person", prenom: "Jean", nom: "Dupont", migratedFrom: "people", roles: [] },
+            { id: "B", entityType: "person", prenom: "Jean", nom: "Dupont", migratedFrom: "people", roles: [] }
+        ]
+    };
+    assertSameStructure(context.checkDirectoryPossibleDuplicates(), []);
 });
 
 console.log(`\n${passed} test(s) réussi(s), ${failed} échec(s).`);

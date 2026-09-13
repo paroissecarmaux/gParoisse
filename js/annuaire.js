@@ -95,11 +95,6 @@ function roleLabel(role) {
     return ROLE_LABELS[role.type] || role.type;
 }
 
-function directoryDisplayName(entry) {
-    if (entry.entityType === "organization") return entry.nom || "Organisation sans nom";
-    return `${entry.prenom || ""} ${entry.nom || ""}`.trim() || "Sans nom";
-}
-
 /* ============================================================
    FILTRAGE & RENDU LISTE
 ============================================================ */

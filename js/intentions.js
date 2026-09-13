@@ -92,7 +92,11 @@ function intentionStatusClass(statut) {
 }
 
 function renderIntentionCard(i) {
-    const celebrant = i.personnelId ? state.personnel.find(p => p.id === i.personnelId) : null;
+    // V6.8.c : résolu depuis l'Annuaire en priorité (repli legacy) — la
+    // carte n'a pas la place d'indiquer un statut "en corbeille", donc on
+    // ne montre le nom que si activement résolvable, comme avant.
+    const celebrantLink = i.personnelId ? resolveDirectoryPersonnel(i.personnelId) : null;
+    const celebrant = celebrantLink && celebrantLink.status === "active" ? celebrantLink.record : null;
     const clocher = i.clocherId ? state.clochers.find(c => c.id === i.clocherId) : null;
 
     return `
@@ -143,8 +147,10 @@ function fillIntentionForm(i) {
     $("#intentionDemandeur").value = "";
     $("#intentionPersonId").value = i.personId || "";
     if (i.personId) {
-        const person = state.people.find(p => p.id === i.personId);
-        if (person) $("#intentionDemandeur").value = `${person.prenom} ${person.nom}`.trim();
+        // V6.8.c : résolu depuis l'Annuaire en priorité (repli legacy) —
+        // ne préremplit que si activement résolvable, comme avant.
+        const personLink = resolveDirectoryPerson(i.personId);
+        if (personLink.status === "active") $("#intentionDemandeur").value = `${personLink.record.prenom} ${personLink.record.nom}`.trim();
     }
     $("#demandeurAutocompleteMenu").hidden = true;
     $("#intentionContact").value = i.contact || "";
@@ -161,8 +167,8 @@ function fillIntentionForm(i) {
     $("#intentionCelebrant").value = "";
     $("#intentionPersonnelId").value = i.personnelId || "";
     if (i.personnelId) {
-        const celebrant = state.personnel.find(p => p.id === i.personnelId);
-        if (celebrant) $("#intentionCelebrant").value = `${celebrant.prenom} ${celebrant.nom}`.trim();
+        const celebrantLink = resolveDirectoryPersonnel(i.personnelId);
+        if (celebrantLink.status === "active") $("#intentionCelebrant").value = `${celebrantLink.record.prenom} ${celebrantLink.record.nom}`.trim();
     }
     $("#celebrantAutocompleteMenu").hidden = true;
     $("#intentionOffrande").value = i.offrande || "";
@@ -236,9 +242,12 @@ function showIntentionDetail(id) {
     if (!i) return;
     state.selectedIntentionId = id;
 
-    const personLink = findLinked(state.people, state.peopleTrash, i.personId);
+    // V6.8.c : personId/personnelId résolus depuis l'Annuaire en priorité,
+    // avec repli vers les anciennes tables people/personnel — voir
+    // js/core/directory.js. Ni l'un ni l'autre champ n'a changé de nom.
+    const personLink = resolveDirectoryPerson(i.personId);
     const clocherLink = findLinked(state.clochers, state.clochersTrash, i.clocherId);
-    const celebrantLink = findLinked(state.personnel, state.personnelTrash, i.personnelId);
+    const celebrantLink = resolveDirectoryPersonnel(i.personnelId);
 
     $("#intentionDetailTitle").textContent = `Intentions › ${i.intitule || i.type}`;
 
@@ -450,12 +459,22 @@ function initIntentionsEvents() {
     $("#intentionDeleteBtn").addEventListener("click", () => state.selectedIntentionId && trashIntention(state.selectedIntentionId));
 
     $("#intentionDetailBody").addEventListener("click", e => {
+        // V6.8.c : ouvre la fiche Annuaire si le lien a été résolu via
+        // directory, sinon la fiche legacy (people/personnel) — voir
+        // resolveDirectoryPerson()/resolveDirectoryPersonnel().
         const personBtn = e.target.closest("[data-goto-person]");
-        if (personBtn) { showPersonDetail(personBtn.dataset.gotoPerson); return; }
+        if (personBtn) {
+            if (personBtn.dataset.gotoSource === "directory") showDirectoryDetail(personBtn.dataset.gotoPerson);
+            else showPersonDetail(personBtn.dataset.gotoPerson);
+            return;
+        }
         const clocherBtn = e.target.closest("[data-goto-clocher]");
         if (clocherBtn) { showClocherDetail(clocherBtn.dataset.gotoClocher); return; }
         const personnelBtn = e.target.closest("[data-goto-personnel]");
-        if (personnelBtn) showPersonnelDetail(personnelBtn.dataset.gotoPersonnel);
+        if (personnelBtn) {
+            if (personnelBtn.dataset.gotoSource === "directory") showDirectoryDetail(personnelBtn.dataset.gotoPersonnel);
+            else showPersonnelDetail(personnelBtn.dataset.gotoPersonnel);
+        }
     });
 
     $("#intentionList").addEventListener("click", e => {

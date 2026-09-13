@@ -9,17 +9,26 @@
 ============================================================ */
 const GLOBAL_SEARCH_SOURCES = [
     {
-        key: "people",
-        label: "Membres",
+        // V6.8.c : remplace les deux anciennes sources "people"/"personnel"
+        // — chaque fiche people/personnel a désormais un équivalent dans
+        // directory (migration id-préservante, V6.8.a), les garder toutes
+        // les trois aurait affiché la même identité deux fois. Une fiche
+        // créée depuis les écrans historiques pendant la session en cours
+        // n'apparaît ici qu'au prochain démarrage (le temps que la
+        // migration idempotente la reprenne) — limite connue, documentée
+        // dans docs/V6.8-C-ANNUAIRE-INTEGRATION.md.
+        key: "directory",
+        label: "Annuaire",
         icon: "person",
-        search: q => state.people
-            .filter(p => normalize(`${p.prenom} ${p.nom} ${p.telephone} ${p.email}`).includes(q))
+        search: q => state.directory
+            .filter(e => directoryMatchesQuery(e, q))
             .slice(0, 8),
-        title: p => `${p.prenom} ${p.nom}`.trim() || "Sans nom",
-        subtitle: p => p.dateDeces
-            ? `Décédé(e) le ${formatDate(p.dateDeces)}`
-            : ([p.telephone, p.email].filter(Boolean).join(" · ") || "Aucun contact renseigné"),
-        open: p => showPersonDetail(p.id)
+        title: e => directoryDisplayName(e),
+        subtitle: e => {
+            const roles = DIRECTORY_ROLE_TYPES.filter(t => hasRole(e, t)).map(t => ROLE_LABELS[t]);
+            return roles.length ? roles.join(" · ") : "Rôle à déterminer";
+        },
+        open: e => showDirectoryDetail(e.id)
     },
     {
         key: "requests",
@@ -42,17 +51,6 @@ const GLOBAL_SEARCH_SOURCES = [
         title: i => i.intitule || i.type,
         subtitle: i => `${i.type} · ${formatDate(i.dateDebut)}`,
         open: i => showIntentionDetail(i.id)
-    },
-    {
-        key: "personnel",
-        label: "Personnel",
-        icon: "badge",
-        search: q => state.personnel
-            .filter(p => normalize(`${p.prenom} ${p.nom} ${p.fonction}`).includes(q))
-            .slice(0, 8),
-        title: p => `${p.prenom} ${p.nom}`.trim() || "Sans nom",
-        subtitle: p => p.fonction || p.typeEngagement || "",
-        open: p => showPersonnelDetail(p.id)
     },
     {
         key: "clochers",
